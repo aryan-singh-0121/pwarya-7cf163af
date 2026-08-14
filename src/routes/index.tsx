@@ -10,13 +10,15 @@ import {
   Upload,
   Copy,
   PlayCircle,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TypingLoop } from "@/components/TypingLoop";
 import { SupportPopup } from "@/components/SupportPopup";
-import { fetchPlans, fetchSettings, youtubeEmbed } from "@/lib/site";
+import { fetchPlans, fetchSettings, youtubeEmbed, passwordScore } from "@/lib/site";
+import { buildUpiLink } from "@/lib/upi";
 import {
   createProofUploadUrl,
   getAssetUrl,
@@ -72,6 +74,9 @@ function Home() {
           PWARYA
         </span>
         <nav className="flex items-center gap-2">
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/track">Track UTR</Link>
+          </Button>
           <Button asChild variant="ghost" size="sm">
             <Link to="/login">Login</Link>
           </Button>
@@ -197,29 +202,54 @@ function PaymentSection({
     holderName: "",
     email: "",
     phone: "",
+    password: "",
     planCode: "",
     utr: "",
   });
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [payQr, setPayQr] = useState<string | null>(null);
+
+  const plan = plans.find((p) => p.code === form.planCode) ?? null;
+  const upiLink = buildUpiLink({
+    upiId: upi,
+    amount: plan?.price_inr,
+    note: plan ? `PW ARYA ${plan.name}` : "PW ARYA membership",
+  });
+  const strength = passwordScore(form.password);
+
+  // The QR is generated live from the admin's UPI ID + the selected plan amount.
+  useEffect(() => {
+    let alive = true;
+    if (!upiLink) {
+      setPayQr(null);
+      return;
+    }
+    import("qrcode").then((QR) =>
+      QR.toDataURL(upiLink, {
+        width: 320,
+        margin: 1,
+        color: { dark: "#0b1020", light: "#ffffff" },
+      }).then((url) => {
+        if (alive) setPayQr(url);
+      }),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [upiLink]);
 
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!/^[0-9]{12}$/.test(form.utr)) {
-      toast.error("UTR must be exactly 12 digits");
-      return;
-    }
-    if (!form.planCode) {
-      toast.error("Please select a plan");
-      return;
-    }
-    if (!file) {
-      toast.error("Please attach your payment screenshot");
-      return;
-    }
+    if (!form.planCode) return toast.error("Please select a plan");
+    if (!/^[0-9]{10}$/.test(form.phone)) return toast.error("Phone number must be 10 digits");
+    if (strength.score < 4) return toast.error("Please choose a stronger password");
+    if (!/^[0-9]{12}$/.test(form.utr)) return toast.error("UTR must be exactly 12 digits");
+    if (!file) return toast.error("Please attach your payment screenshot");
+
     setBusy(true);
     try {
       const ext = (file.name.split(".").pop() ?? "png").toLowerCase();
@@ -250,35 +280,81 @@ function PaymentSection({
     <section id="pay" className="mx-auto max-w-6xl px-5 pb-20">
       <h2 className="font-display text-3xl tracking-wide">Pay to access</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        Scan the QR, pay your plan amount, then submit your 12-digit UTR with the screenshot.
-        After approval you will receive an access key by email to create your account.
+        Select your plan, pay with the QR or the pay button, then submit your 12-digit UTR with the
+        screenshot and the login details you want. Access switches on the moment we approve.
       </p>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <div className="glow-card rounded-2xl p-6 text-center">
-          {qrUrl ? (
+          <div className="mx-auto max-w-xs text-left">
+            <Label htmlFor="planqr">Select plan</Label>
+            <select
+              id="planqr"
+              value={form.planCode}
+              onChange={(e) => set("planCode", e.target.value)}
+              className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Select a plan</option>
+              {plans.map((p) => (
+                <option key={p.code} value={p.code}>
+                  {p.name} — ₹{p.price_inr}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {payQr ? (
+            <>
+              <img
+                src={payQr}
+                alt={`UPI QR code for the PW ARYA ${plan?.name ?? "membership"} plan`}
+                className="mx-auto mt-5 w-56 rounded-xl bg-card p-2"
+              />
+              <p className="mt-2 text-sm">
+                {plan ? (
+                  <>
+                    Pay <span className="gold-text font-display text-2xl">₹{plan.price_inr}</span>
+                  </>
+                ) : (
+                  "Select a plan to lock the amount into the QR"
+                )}
+              </p>
+            </>
+          ) : qrUrl ? (
             <img
               src={qrUrl}
               alt="UPI payment QR code for PW ARYA membership"
-              className="mx-auto w-56 rounded-xl bg-card p-2"
+              className="mx-auto mt-5 w-56 rounded-xl bg-card p-2"
               loading="lazy"
             />
           ) : (
-            <div className="mx-auto flex h-56 w-56 items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">
+            <div className="mx-auto mt-5 flex h-56 w-56 items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">
               QR will appear here
             </div>
           )}
+
           {upi ? (
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard.writeText(upi);
-                toast.success("UPI ID copied");
-              }}
-              className="mx-auto mt-4 flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm"
-            >
-              <Copy className="h-4 w-4" /> {upi}
-            </button>
+            <div className="mt-4 space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(upi);
+                  toast.success("UPI ID copied");
+                }}
+                className="mx-auto flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm"
+              >
+                <Copy className="h-4 w-4" /> {upi}
+              </button>
+              <Button asChild className="w-full" disabled={!upiLink}>
+                <a href={upiLink}>
+                  <Wallet className="mr-2 h-4 w-4" /> Click to pay
+                  {plan ? ` ₹${plan.price_inr}` : ""}
+                </a>
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Opens your UPI app (GPay, PhonePe, Paytm) with the amount filled in.
+              </p>
+            </div>
           ) : null}
         </div>
 
@@ -287,9 +363,12 @@ function PaymentSection({
             <BadgeCheck className="h-12 w-12 text-success" />
             <h3 className="mt-3 font-display text-2xl tracking-wide">Submitted</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Your payment is under verification. You will get your access key on your email
-              after approval.
+              Your payment is under verification. After approval you can log in with the same
+              email/phone and password you just set.
             </p>
+            <Button asChild variant="secondary" className="mt-4">
+              <Link to="/track">Track my UTR</Link>
+            </Button>
           </div>
         ) : (
           <form onSubmit={onSubmit} className="glow-card space-y-4 rounded-2xl p-6">
@@ -305,7 +384,7 @@ function PaymentSection({
                 />
               </div>
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email (used to login)</Label>
                 <Input
                   id="email"
                   type="email"
@@ -315,31 +394,38 @@ function PaymentSection({
                 />
               </div>
               <div>
-                <Label htmlFor="phone">Phone number</Label>
+                <Label htmlFor="phone">Phone number (10 digits)</Label>
                 <Input
                   id="phone"
                   required
                   inputMode="numeric"
                   value={form.phone}
-                  onChange={(e) => set("phone", e.target.value.replace(/\D/g, "").slice(0, 15))}
+                  onChange={(e) => set("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
                 />
+                <p className="mt-1 text-xs text-muted-foreground">{form.phone.length}/10 digits</p>
               </div>
               <div>
-                <Label htmlFor="plan">Plan</Label>
-                <select
-                  id="plan"
+                <Label htmlFor="pw">Set your password</Label>
+                <Input
+                  id="pw"
+                  type="password"
                   required
-                  value={form.planCode}
-                  onChange={(e) => set("planCode", e.target.value)}
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="">Select a plan</option>
-                  {plans.map((p) => (
-                    <option key={p.code} value={p.code}>
-                      {p.name} — ₹{p.price_inr}
-                    </option>
+                  value={form.password}
+                  onChange={(e) => set("password", e.target.value)}
+                />
+                <div className="mt-2 flex gap-1">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <span
+                      key={i}
+                      className={`h-1.5 flex-1 rounded-full ${
+                        i < strength.score ? "bg-primary" : "bg-muted"
+                      }`}
+                    />
                   ))}
-                </select>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {strength.label} — 8+ chars, upper, lower, number, symbol.
+                </p>
               </div>
             </div>
 
@@ -378,6 +464,9 @@ function PaymentSection({
             <Button type="submit" className="w-full" disabled={busy}>
               {busy ? "Submitting..." : "Submit payment details"}
             </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              Screenshots are permanently deleted as soon as your payment is reviewed.
+            </p>
           </form>
         )}
       </div>
