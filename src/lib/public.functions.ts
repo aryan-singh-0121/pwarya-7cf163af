@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestIP } from "@tanstack/react-start/server";
 import { z } from "zod";
-import { verifyTurnstile, generateAccessKey } from "./admin.server";
+import { verifyTurnstile } from "./admin.server";
 import { writeAudit } from "./audit.server";
 
 const emailSchema = z.string().trim().toLowerCase().email().max(255);
