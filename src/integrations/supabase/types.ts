@@ -56,6 +56,39 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          actor: string
+          created_at: string
+          details: Json
+          email: string | null
+          id: string
+          target_id: string | null
+          target_type: string
+        }
+        Insert: {
+          action: string
+          actor?: string
+          created_at?: string
+          details?: Json
+          email?: string | null
+          id?: string
+          target_id?: string | null
+          target_type?: string
+        }
+        Update: {
+          action?: string
+          actor?: string
+          created_at?: string
+          details?: Json
+          email?: string | null
+          id?: string
+          target_id?: string | null
+          target_type?: string
+        }
+        Relationships: []
+      }
       device_sessions: {
         Row: {
           created_at: string
@@ -155,11 +188,13 @@ export type Database = {
           admin_note: string | null
           created_at: string
           decided_at: string | null
+          deny_reason: string | null
           email: string
           holder_name: string
           id: string
           phone: string
           plan_code: string
+          proof_deleted_at: string | null
           purge_at: string | null
           screenshot_path: string | null
           status: string
@@ -171,11 +206,13 @@ export type Database = {
           admin_note?: string | null
           created_at?: string
           decided_at?: string | null
+          deny_reason?: string | null
           email: string
           holder_name: string
           id?: string
           phone?: string
           plan_code: string
+          proof_deleted_at?: string | null
           purge_at?: string | null
           screenshot_path?: string | null
           status?: string
@@ -187,11 +224,13 @@ export type Database = {
           admin_note?: string | null
           created_at?: string
           decided_at?: string | null
+          deny_reason?: string | null
           email?: string
           holder_name?: string
           id?: string
           phone?: string
           plan_code?: string
+          proof_deleted_at?: string | null
           purge_at?: string | null
           screenshot_path?: string | null
           status?: string

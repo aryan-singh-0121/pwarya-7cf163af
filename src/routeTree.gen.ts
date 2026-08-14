@@ -13,7 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as SignupRouteImport } from './routes/signup'
+import { Route as TrackRouteImport } from './routes/track'
 import { Route as ApiPortalSplatRouteImport } from './routes/api/portal/$'
 import { Route as ApiPublicHooksMaintenanceRouteImport } from './routes/api/public/hooks/maintenance'
 
@@ -37,9 +37,9 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
+const TrackRoute = TrackRouteImport.update({
+  id: '/track',
+  path: '/track',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPortalSplatRoute = ApiPortalSplatRouteImport.update({
@@ -59,7 +59,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
+  '/track': typeof TrackRoute
   '/api/portal/$': typeof ApiPortalSplatRoute
   '/api/public/hooks/maintenance': typeof ApiPublicHooksMaintenanceRoute
 }
@@ -68,7 +68,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
+  '/track': typeof TrackRoute
   '/api/portal/$': typeof ApiPortalSplatRoute
   '/api/public/hooks/maintenance': typeof ApiPublicHooksMaintenanceRoute
 }
@@ -78,7 +78,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
+  '/track': typeof TrackRoute
   '/api/portal/$': typeof ApiPortalSplatRoute
   '/api/public/hooks/maintenance': typeof ApiPublicHooksMaintenanceRoute
 }
@@ -89,7 +89,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/login'
-    | '/signup'
+    | '/track'
     | '/api/portal/$'
     | '/api/public/hooks/maintenance'
   fileRoutesByTo: FileRoutesByTo
@@ -98,7 +98,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/login'
-    | '/signup'
+    | '/track'
     | '/api/portal/$'
     | '/api/public/hooks/maintenance'
   id:
@@ -107,7 +107,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/login'
-    | '/signup'
+    | '/track'
     | '/api/portal/$'
     | '/api/public/hooks/maintenance'
   fileRoutesById: FileRoutesById
@@ -117,7 +117,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
-  SignupRoute: typeof SignupRoute
+  TrackRoute: typeof TrackRoute
   ApiPortalSplatRoute: typeof ApiPortalSplatRoute
   ApiPublicHooksMaintenanceRoute: typeof ApiPublicHooksMaintenanceRoute
 }
@@ -152,11 +152,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
+    '/track': {
+      id: '/track'
+      path: '/track'
+      fullPath: '/track'
+      preLoaderRoute: typeof TrackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/portal/$': {
@@ -181,7 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
-  SignupRoute: SignupRoute,
+  TrackRoute: TrackRoute,
   ApiPortalSplatRoute: ApiPortalSplatRoute,
   ApiPublicHooksMaintenanceRoute: ApiPublicHooksMaintenanceRoute,
 }
