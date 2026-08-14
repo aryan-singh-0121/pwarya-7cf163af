@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPortalSplatRouteImport } from './routes/api/portal/$'
+import { Route as ApiPublicHooksMaintenanceRouteImport } from './routes/api/public/hooks/maintenance'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,41 @@ const ApiPortalSplatRoute = ApiPortalSplatRouteImport.update({
   path: '/api/portal/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksMaintenanceRoute =
+  ApiPublicHooksMaintenanceRouteImport.update({
+    id: '/api/public/hooks/maintenance',
+    path: '/api/public/hooks/maintenance',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/portal/$': typeof ApiPortalSplatRoute
+  '/api/public/hooks/maintenance': typeof ApiPublicHooksMaintenanceRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/portal/$': typeof ApiPortalSplatRoute
+  '/api/public/hooks/maintenance': typeof ApiPublicHooksMaintenanceRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/portal/$': typeof ApiPortalSplatRoute
+  '/api/public/hooks/maintenance': typeof ApiPublicHooksMaintenanceRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/portal/$'
+  fullPaths: '/' | '/api/portal/$' | '/api/public/hooks/maintenance'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/portal/$'
-  id: '__root__' | '/' | '/api/portal/$'
+  to: '/' | '/api/portal/$' | '/api/public/hooks/maintenance'
+  id: '__root__' | '/' | '/api/portal/$' | '/api/public/hooks/maintenance'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiPortalSplatRoute: typeof ApiPortalSplatRoute
+  ApiPublicHooksMaintenanceRoute: typeof ApiPublicHooksMaintenanceRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +76,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPortalSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/maintenance': {
+      id: '/api/public/hooks/maintenance'
+      path: '/api/public/hooks/maintenance'
+      fullPath: '/api/public/hooks/maintenance'
+      preLoaderRoute: typeof ApiPublicHooksMaintenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiPortalSplatRoute: ApiPortalSplatRoute,
+  ApiPublicHooksMaintenanceRoute: ApiPublicHooksMaintenanceRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
