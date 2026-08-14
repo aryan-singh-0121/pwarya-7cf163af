@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as ApiPortalSplatRouteImport } from './routes/api/portal/$'
 import { Route as ApiPublicHooksMaintenanceRouteImport } from './routes/api/public/hooks/maintenance'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPortalSplatRoute = ApiPortalSplatRouteImport.update({
@@ -32,30 +38,39 @@ const ApiPublicHooksMaintenanceRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/api/portal/$': typeof ApiPortalSplatRoute
   '/api/public/hooks/maintenance': typeof ApiPublicHooksMaintenanceRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/api/portal/$': typeof ApiPortalSplatRoute
   '/api/public/hooks/maintenance': typeof ApiPublicHooksMaintenanceRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/api/portal/$': typeof ApiPortalSplatRoute
   '/api/public/hooks/maintenance': typeof ApiPublicHooksMaintenanceRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/portal/$' | '/api/public/hooks/maintenance'
+  fullPaths: '/' | '/login' | '/api/portal/$' | '/api/public/hooks/maintenance'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/portal/$' | '/api/public/hooks/maintenance'
-  id: '__root__' | '/' | '/api/portal/$' | '/api/public/hooks/maintenance'
+  to: '/' | '/login' | '/api/portal/$' | '/api/public/hooks/maintenance'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/api/portal/$'
+    | '/api/public/hooks/maintenance'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
   ApiPortalSplatRoute: typeof ApiPortalSplatRoute
   ApiPublicHooksMaintenanceRoute: typeof ApiPublicHooksMaintenanceRoute
 }
@@ -67,6 +82,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/portal/$': {
@@ -88,6 +110,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
   ApiPortalSplatRoute: ApiPortalSplatRoute,
   ApiPublicHooksMaintenanceRoute: ApiPublicHooksMaintenanceRoute,
 }
