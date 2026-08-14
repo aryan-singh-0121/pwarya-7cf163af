@@ -94,13 +94,18 @@ export const decidePayment = createServerFn({ method: "POST" })
       .object({
         id: z.string().uuid(),
         decision: z.enum(["approved", "denied"]),
-        note: z.string().max(300).optional(),
+        reason: z.string().trim().max(300).optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
-    await requireAdmin();
+    const session = await requireAdmin();
+    const actor = session.data.user ?? "admin";
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { writeAudit } = await import("./audit.server");
+
+    if (data.decision === "denied" && !data.reason)
+      return { ok: false as const, error: "Please write a reason for the rejection." };
 
     const { data: req } = await supabaseAdmin
       .from("payment_requests")
@@ -116,14 +121,21 @@ export const decidePayment = createServerFn({ method: "POST" })
       .from("payment_requests")
       .update({
         status: data.decision,
-        admin_note: data.note ?? null,
+        admin_note: data.reason ?? null,
+        deny_reason: data.decision === "denied" ? (data.reason ?? null) : null,
         access_key: accessKey,
         decided_at: new Date().toISOString(),
         purge_at: purgeAt,
       })
       .eq("id", data.id);
 
-    // If the payer already has an account, extend it right away.
+    const { data: plan } = await supabaseAdmin
+      .from("plans")
+      .select("duration_days, name")
+      .eq("code", req.plan_code)
+      .maybeSingle();
+
+    // The buyer already set their credentials at payment time — switch access on.
     if (data.decision === "approved") {
       const { data: profile } = await supabaseAdmin
         .from("profiles")
@@ -131,11 +143,6 @@ export const decidePayment = createServerFn({ method: "POST" })
         .eq("email", req.email)
         .maybeSingle();
       if (profile) {
-        const { data: plan } = await supabaseAdmin
-          .from("plans")
-          .select("duration_days")
-          .eq("code", req.plan_code)
-          .maybeSingle();
         const days = plan?.duration_days ?? 10;
         await supabaseAdmin
           .from("subscriptions")
@@ -149,6 +156,7 @@ export const decidePayment = createServerFn({ method: "POST" })
           access_key: accessKey,
           expires_at: new Date(Date.now() + days * 86400000).toISOString(),
         });
+        await supabaseAdmin.from("profiles").update({ status: "active" }).eq("id", profile.id);
         await supabaseAdmin
           .from("payment_requests")
           .update({ user_id: profile.id })
@@ -156,7 +164,67 @@ export const decidePayment = createServerFn({ method: "POST" })
       }
     }
 
-    return { ok: true as const, accessKey };
+    // Proof screenshots are deleted the moment a decision is made.
+    let proofDeleted = false;
+    if (req.screenshot_path) {
+      const { error: delErr } = await supabaseAdmin.storage
+        .from("payment-proofs")
+        .remove([req.screenshot_path]);
+      proofDeleted = !delErr;
+      if (proofDeleted) {
+        await supabaseAdmin
+          .from("payment_requests")
+          .update({ screenshot_path: null, proof_deleted_at: new Date().toISOString() })
+          .eq("id", data.id);
+      }
+      await writeAudit({
+        actor,
+        action: proofDeleted ? "proof_deleted" : "proof_delete_failed",
+        targetType: "payment_request",
+        targetId: req.id,
+        email: req.email,
+        details: { path: req.screenshot_path, utr: req.utr },
+      });
+    }
+
+    // Notify the buyer by email (best effort).
+    let emailed = false;
+    try {
+      const { sendEmail, accessKeyEmail, decisionEmail } = await import("./email.server");
+      const mail =
+        data.decision === "approved"
+          ? await sendEmail({
+              to: req.email,
+              subject: "Your PW ARYA access key",
+              html: accessKeyEmail(req.holder_name, accessKey!, plan?.name ?? req.plan_code),
+            })
+          : await sendEmail({
+              to: req.email,
+              subject: "PW ARYA payment update",
+              html: decisionEmail(req.holder_name, data.reason ?? "Payment could not be verified."),
+            });
+      emailed = mail.ok;
+    } catch {
+      emailed = false;
+    }
+
+    await writeAudit({
+      actor,
+      action: data.decision === "approved" ? "payment_approved" : "payment_denied",
+      targetType: "payment_request",
+      targetId: req.id,
+      email: req.email,
+      details: {
+        utr: req.utr,
+        plan: req.plan_code,
+        reason: data.reason ?? null,
+        accessKey,
+        emailed,
+        proofDeleted,
+      },
+    });
+
+    return { ok: true as const, accessKey, emailed, proofDeleted };
   });
 
 export const adminCreateUser = createServerFn({ method: "POST" })
