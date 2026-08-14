@@ -17,10 +17,13 @@ export const adminLogin = createServerFn({ method: "POST" })
       .object({
         username: z.string().trim().min(1).max(80),
         password: z.string().min(1).max(200),
+        human: z.boolean().optional(),
       })
       .parse(d),
   )
   .handler(async ({ data }) => {
+    if (data.human !== true)
+      return { ok: false as const, error: "Please complete the human verification." };
     const user = process.env["ADMIN_USERNAME"];
     const pass = process.env["ADMIN_PASSWORD"];
     if (!user || !pass) return { ok: false as const, error: "Admin is not configured." };
@@ -30,6 +33,8 @@ export const adminLogin = createServerFn({ method: "POST" })
     }
     const session = await useSession<AdminSession>(adminSessionConfig());
     await session.update({ admin: true, user });
+    const { writeAudit } = await import("./audit.server");
+    await writeAudit({ actor: user, action: "admin_login", targetType: "admin" });
     return { ok: true as const };
   });
 
@@ -48,7 +53,7 @@ export const adminOverview = createServerFn({ method: "POST" }).handler(async ()
   await requireAdmin();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  const [requests, users, subs, alerts, fb, settings, plans, devices] = await Promise.all([
+  const [requests, users, subs, alerts, fb, settings, plans, devices, audit] = await Promise.all([
     supabaseAdmin
       .from("payment_requests")
       .select("*")
@@ -61,6 +66,7 @@ export const adminOverview = createServerFn({ method: "POST" }).handler(async ()
     supabaseAdmin.from("app_settings").select("*").eq("id", 1).maybeSingle(),
     supabaseAdmin.from("plans").select("*").order("sort_order"),
     supabaseAdmin.from("device_sessions").select("*").order("last_seen", { ascending: false }).limit(300),
+    supabaseAdmin.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(300),
   ]);
 
   const withProof = await Promise.all(
@@ -85,6 +91,7 @@ export const adminOverview = createServerFn({ method: "POST" }).handler(async ()
     settings: settings.data ?? null,
     plans: plans.data ?? [],
     devices: devices.data ?? [],
+    audit: audit.data ?? [],
   };
 });
 
@@ -287,6 +294,8 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
     await supabaseAdmin.from("feedback").delete().eq("user_id", data.userId);
     await supabaseAdmin.from("profiles").delete().eq("id", data.userId);
     await supabaseAdmin.auth.admin.deleteUser(data.userId);
+    const { writeAudit } = await import("./audit.server");
+    await writeAudit({ action: "user_deleted", targetType: "user", targetId: data.userId });
     return { ok: true as const };
   });
 
@@ -317,6 +326,13 @@ export const adminSetUserStatus = createServerFn({ method: "POST" })
           .eq("status", "active");
       }
     }
+    const { writeAudit } = await import("./audit.server");
+    await writeAudit({
+      action: data.status === "suspended" ? "user_suspended" : "user_activated",
+      targetType: "user",
+      targetId: data.userId,
+      details: { cancelSubscription: data.cancelSubscription ?? false },
+    });
     return { ok: true as const };
   });
 
@@ -329,6 +345,8 @@ export const adminResetDevice = createServerFn({ method: "POST" })
       .from("device_sessions")
       .update({ is_active: false })
       .eq("user_id", data.userId);
+    const { writeAudit } = await import("./audit.server");
+    await writeAudit({ action: "device_lock_reset", targetType: "user", targetId: data.userId });
     return { ok: true as const };
   });
 

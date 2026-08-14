@@ -110,6 +110,14 @@ export const startDeviceSession = createServerFn({ method: "POST" })
     }
 
     if (other) {
+      const { writeAudit } = await import("./audit.server");
+      await writeAudit({
+        action: "device_lock_violation",
+        targetType: "user",
+        targetId: userId,
+        email,
+        details: { attemptedDevice: data.deviceId, activeDevice: other.device_id, ip },
+      });
       return {
         ok: false as const,
         error: "This account is already active on another device. Log out there first.",
