@@ -221,6 +221,3 @@ export const resolveLoginIdentifier = createServerFn({ method: "POST" })
       .maybeSingle();
     return { email: req?.email ?? null };
   });
-
-/** Kept for admin-issued keys that need to mint a fresh key value. */
-export const _unusedKeyFactory = generateAccessKey;
