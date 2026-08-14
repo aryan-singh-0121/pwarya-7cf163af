@@ -1,11 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { startDeviceSession } from "@/lib/member.functions";
+import { resolveLoginIdentifier } from "@/lib/public.functions";
 import { getDeviceId } from "@/hooks/useDeviceId";
 
 export const Route = createFileRoute("/login")({
@@ -14,7 +16,8 @@ export const Route = createFileRoute("/login")({
       { title: "Member Login — PW ARYA" },
       {
         name: "description",
-        content: "Sign in to your PW ARYA membership to open your premium study batches.",
+        content:
+          "Sign in with your email, phone number or access key to open your PW ARYA premium study batches.",
       },
       { property: "og:title", content: "Member Login — PW ARYA" },
       { property: "og:description", content: "Secure one-device login for PW ARYA members." },
@@ -27,17 +30,27 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [human, setHuman] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!human) {
+      toast.error("Please complete the human verification");
+      return;
+    }
     setBusy(true);
     try {
+      const { email } = await resolveLoginIdentifier({ data: { identifier } });
+      if (!email) {
+        toast.error("No account found for these details");
+        return;
+      }
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        toast.error("Invalid email or password");
+        toast.error("Invalid credentials");
         return;
       }
       const res = await startDeviceSession({
@@ -66,14 +79,14 @@ function LoginPage() {
         <form onSubmit={onSubmit} className="glow-card mt-8 space-y-4 rounded-2xl p-6">
           <h1 className="font-display text-3xl tracking-wide">Member login</h1>
           <div>
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="identifier">Email, phone number or access key</Label>
             <Input
-              id="email"
-              type="email"
+              id="identifier"
               required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="username"
+              placeholder="you@mail.com / 9876543210 / PWARYA-XXXX-00"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
             />
           </div>
           <div>
@@ -87,15 +100,34 @@ function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
+          <button
+            type="button"
+            onClick={() => setHuman((h) => !h)}
+            className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-sm transition ${
+              human ? "border-success/60 bg-success/10 text-success" : "border-border"
+            }`}
+          >
+            <span
+              className={`flex h-5 w-5 items-center justify-center rounded border ${
+                human ? "border-success bg-success/20" : "border-muted-foreground"
+              }`}
+            >
+              {human ? "✓" : ""}
+            </span>
+            <ShieldCheck className="h-4 w-4" />
+            {human ? "Verified — you are human" : "Click to verify you are human"}
+          </button>
           <Button type="submit" className="w-full" disabled={busy}>
             {busy ? "Verifying..." : "Login"}
           </Button>
-          <p className="text-center text-sm text-muted-foreground">
-            Have an access key?{" "}
-            <Link to="/signup" className="text-primary hover:underline">
-              Create your account
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <Link to="/" hash="pay" className="text-primary hover:underline">
+              Buy a plan
             </Link>
-          </p>
+            <Link to="/track" className="hover:text-foreground">
+              Track my UTR
+            </Link>
+          </div>
         </form>
       </div>
     </div>
