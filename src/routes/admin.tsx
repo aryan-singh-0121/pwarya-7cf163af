@@ -359,6 +359,19 @@ function Payments({ requests, refresh }: { requests: any[]; refresh: () => void 
                 </div>
               )
             ) : null}
+
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive"
+              onClick={() => {
+                if (!confirm(`Permanently delete this request from ${r.holder_name}?`)) return;
+                void removeRequest(r.id);
+              }}
+            >
+              Delete this record
+            </Button>
+
           </div>
         </div>
       ))}
