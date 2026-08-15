@@ -8,8 +8,9 @@ import {
   ShieldAlert,
   RefreshCw,
   Rocket,
-  Maximize2,
-  ExternalLink,
+  BookOpen,
+  Hand,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,6 @@ import {
   changeMyPassword,
   endDeviceSession,
   getMemberState,
-  getPortalTarget,
   sendFeedback,
 } from "@/lib/member.functions";
 import { getDeviceId } from "@/hooks/useDeviceId";
@@ -54,7 +54,7 @@ function Dashboard() {
   const state = useQuery({
     queryKey: ["member", deviceId],
     enabled: !!deviceId,
-    refetchInterval: 60000,
+    refetchInterval: 30000,
     queryFn: async () => {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
@@ -73,59 +73,101 @@ function Dashboard() {
 
   const s = state.data;
 
+  // Signed out remotely: the account was opened on another device.
+  useEffect(() => {
+    if (s && "evicted" in s && s.evicted) {
+      toast.error("Signed out — this account was opened on another device.");
+      void supabase.auth.signOut().then(() => navigate({ to: "/login" }));
+    }
+  }, [s, navigate]);
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="flex items-center justify-between border-b border-border px-4 py-3">
         <span className="animate-blink-logo font-display text-2xl tracking-[0.18em] text-primary">
           PWARYA
         </span>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant={tab === "study" ? "default" : "ghost"}
-            onClick={() => setTab("study")}
-          >
-            Study
-          </Button>
-          <Button
-            size="sm"
-            variant={tab === "profile" ? "default" : "ghost"}
-            onClick={() => setTab("profile")}
-          >
-            <User className="mr-1 h-4 w-4" /> Profile
-          </Button>
-          <Button size="sm" variant="secondary" onClick={logout}>
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
+        <span className="text-xs text-muted-foreground">Member area</span>
       </header>
 
-      {state.isLoading ? (
-        <div className="flex flex-1 items-center justify-center text-muted-foreground">
-          Loading your member area...
-        </div>
-      ) : !s ? null : !s.allowed ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-          <ShieldAlert className="h-10 w-10 text-destructive" />
-          <h1 className="font-display text-3xl tracking-wide">Access unavailable</h1>
-          <p className="max-w-md text-sm text-muted-foreground">{s.reason}</p>
-          <Button onClick={() => navigate({ to: "/" })}>Renew membership</Button>
-          <Button variant="ghost" onClick={() => state.refetch()}>
-            <RefreshCw className="mr-1 h-4 w-4" /> Retry
-          </Button>
-        </div>
-      ) : tab === "study" ? (
-        <BatchLauncher portalToken={s.portalToken ?? ""} planCode={s.subscription?.plan_code ?? ""} />
-      ) : (
-        <ProfilePanel
-          profile={s.profile}
-          subscription={s.subscription}
-          onRefresh={() => state.refetch()}
+      <main className="flex min-h-0 flex-1 flex-col pb-20">
+        {state.isLoading ? (
+          <div className="flex flex-1 items-center justify-center text-muted-foreground">
+            Loading your member area...
+          </div>
+        ) : !s ? null : !s.allowed ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+            <ShieldAlert className="h-10 w-10 text-destructive" />
+            <h1 className="font-display text-3xl tracking-wide">Access unavailable</h1>
+            <p className="max-w-md text-sm text-muted-foreground">{s.reason}</p>
+            <Button onClick={() => navigate({ to: "/" })}>Renew membership</Button>
+            <Button variant="ghost" onClick={() => state.refetch()}>
+              <RefreshCw className="mr-1 h-4 w-4" /> Retry
+            </Button>
+          </div>
+        ) : tab === "study" ? (
+          <BatchLauncher
+            portalToken={s.portalToken ?? ""}
+            planCode={s.subscription?.plan_code ?? ""}
+          />
+        ) : (
+          <ProfilePanel
+            profile={s.profile}
+            subscription={s.subscription}
+            onRefresh={() => state.refetch()}
+          />
+        )}
+      </main>
+
+      {/* Bottom navigation: Study · Profile · Logout */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-border bg-card/95 backdrop-blur">
+        <BottomTab
+          active={tab === "study"}
+          icon={<BookOpen className="h-5 w-5" />}
+          label="Study"
+          onClick={() => setTab("study")}
         />
-      )}
+        <BottomTab
+          active={tab === "profile"}
+          icon={<User className="h-5 w-5" />}
+          label="Profile"
+          onClick={() => setTab("profile")}
+        />
+        <BottomTab
+          active={false}
+          icon={<LogOut className="h-5 w-5" />}
+          label="Logout"
+          onClick={logout}
+        />
+      </nav>
     </div>
   );
 }
+
+function BottomTab({
+  active,
+  icon,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex flex-col items-center gap-1 py-3 text-xs font-semibold transition ${
+        active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
 
 type Profile = {
   full_name: string;
