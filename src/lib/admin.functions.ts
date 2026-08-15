@@ -359,6 +359,34 @@ export const adminResolveAlert = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+/** Manually remove a payment request (e.g. clearing out rejected submissions). */
+export const adminDeletePaymentRequest = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const session = await requireAdmin();
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: req } = await supabaseAdmin
+      .from("payment_requests")
+      .select("id, email, utr, status, screenshot_path")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!req) return { ok: false as const, error: "Request not found." };
+    if (req.screenshot_path) {
+      await supabaseAdmin.storage.from("payment-proofs").remove([req.screenshot_path]);
+    }
+    await supabaseAdmin.from("payment_requests").delete().eq("id", data.id);
+    const { writeAudit } = await import("./audit.server");
+    await writeAudit({
+      actor: session.data.user ?? "admin",
+      action: "payment_request_deleted",
+      targetType: "payment_request",
+      targetId: data.id,
+      email: req.email,
+      details: { utr: req.utr, status: req.status },
+    });
+    return { ok: true as const };
+  });
+
 export const adminSaveSettings = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
@@ -369,12 +397,15 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
         support_message: z.string().trim().max(300),
         services_text: z.string().trim().max(4000),
         demo_video_url: z.string().trim().max(400),
+        video_popup_enabled: z.boolean(),
+        video_popup_url: z.string().trim().max(400),
         content_url: z.string().trim().url().max(400),
         highlights: z.array(z.string().trim().max(120)).max(12),
         marquee_lines: z.array(z.string().trim().max(120)).max(8),
       })
       .parse(d),
   )
+
   .handler(async ({ data }) => {
     await requireAdmin();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
