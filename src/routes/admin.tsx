@@ -226,10 +226,39 @@ function Payments({ requests, refresh }: { requests: any[]; refresh: () => void 
     refresh();
   }
 
+  async function removeRequest(id: string) {
+    const res = await adminDeletePaymentRequest({ data: { id } });
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    toast.success("Request deleted");
+    refresh();
+  }
+
+  const rejected = requests.filter((r) => r.status === "denied");
+
   return (
     <div className="space-y-4">
-      <h2 className="font-display text-2xl tracking-wide">Payment requests</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-2xl tracking-wide">Payment requests</h2>
+        {rejected.length ? (
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={async () => {
+              if (!confirm(`Delete all ${rejected.length} rejected requests?`)) return;
+              for (const r of rejected) await adminDeletePaymentRequest({ data: { id: r.id } });
+              toast.success("Rejected requests cleared");
+              refresh();
+            }}
+          >
+            Clear {rejected.length} rejected
+          </Button>
+        ) : null}
+      </div>
       {requests.length === 0 ? <p className="text-muted-foreground">No requests yet.</p> : null}
+
       {requests.map((r) => (
         <div key={r.id} className="glow-card grid gap-4 rounded-2xl p-5 sm:grid-cols-[180px_1fr]">
           {r.proofUrl ? (
