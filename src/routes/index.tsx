@@ -214,7 +214,7 @@ function PaymentSection({
   const plan = plans.find((p) => p.code === form.planCode) ?? null;
   const upiLink = buildUpiLink({
     upiId: upi,
-    amount: plan?.price_inr,
+    ...(plan ? { amount: plan.price_inr } : {}),
     note: plan ? `PW ARYA ${plan.name}` : "PW ARYA membership",
   });
   const strength = passwordScore(form.password);
@@ -224,7 +224,9 @@ function PaymentSection({
     let alive = true;
     if (!upiLink) {
       setPayQr(null);
-      return;
+      return () => {
+        alive = false;
+      };
     }
     import("qrcode").then((QR) =>
       QR.toDataURL(upiLink, {
