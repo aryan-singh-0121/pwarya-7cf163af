@@ -46,15 +46,32 @@ export const Route = createFileRoute("/api/portal/$")({
 
         let upstream: Response;
         try {
-          upstream = await fetch(target.toString(), {
-            headers: {
-              "user-agent": request.headers.get("user-agent") ?? "Mozilla/5.0",
-              accept: request.headers.get("accept") ?? "*/*",
-              "accept-language": "en-US,en;q=0.9",
-              referer: baseUrl.origin + "/",
-            },
-            redirect: "follow",
-          });
+          const ua =
+            request.headers.get("user-agent") ??
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+          // Mirror a real Chrome request as closely as the edge runtime allows.
+          const fwd: Record<string, string> = {
+            "user-agent": ua,
+            accept:
+              request.headers.get("accept") ??
+              "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "accept-language": "en-US,en;q=0.9,hi;q=0.8",
+            "cache-control": "no-cache",
+            pragma: "no-cache",
+            "sec-ch-ua": '"Chromium";v="126", "Not:A-Brand";v="24", "Google Chrome";v="126"',
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": '"Windows"',
+            "sec-fetch-dest": "document",
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-site": "none",
+            "sec-fetch-user": "?1",
+            "upgrade-insecure-requests": "1",
+            referer: baseUrl.origin + "/",
+          };
+          const cookie = request.headers.get("cookie");
+          if (cookie) fwd["cookie"] = cookie;
+
+          upstream = await fetch(target.toString(), { headers: fwd, redirect: "follow" });
         } catch {
           return new Response("Content is temporarily unreachable.", { status: 502 });
         }
@@ -68,6 +85,23 @@ export const Route = createFileRoute("/api/portal/$")({
         const type = upstream.headers.get("content-type") ?? "";
         if (type.includes("text/html")) {
           let html = await upstream.text();
+
+          // Upstream bot-protection challenge: tell the client to launch directly.
+          const challenged =
+            upstream.headers.has("cf-mitigated") ||
+            ((upstream.status === 403 || upstream.status === 503) &&
+              /just a moment|cf-browser-verification|challenge-platform|attention required/i.test(
+                html,
+              ));
+          if (challenged) {
+            headers.set("x-portal-blocked", "1");
+            headers.set("content-type", "text/html; charset=utf-8");
+            return new Response(
+              `<!doctype html><meta charset="utf-8"><body style="font-family:system-ui;background:#0b1020;color:#e8ecf7;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><p style="font-size:18px">Secure reader is warming up.</p><p style="opacity:.7">Use the <b>Open batches</b> button to launch your content.</p></div></body>`,
+              { status: 200, headers },
+            );
+          }
+
           const baseTag = `<base href="${baseUrl.origin}/">`;
           html = html.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
           if (!html.includes("<base")) html = baseTag + html;
