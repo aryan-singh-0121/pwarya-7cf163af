@@ -38,9 +38,17 @@ export const Route = createFileRoute("/api/portal/$")({
         const baseUrl = new URL(base);
 
         const splat = (params as { _splat?: string })._splat ?? "";
+        // Only ever join relative path segments to the configured content host.
+        // Anything that parses as an absolute URL (or escapes the origin) is rejected (SSRF guard).
+        if (/^[a-z][a-z0-9+.-]*:/i.test(splat) || splat.startsWith("//")) {
+          return new Response("Invalid content path.", { status: 400 });
+        }
         const target = splat
-          ? new URL(splat, baseUrl.origin + "/")
+          ? new URL(splat.replace(/^\/+/, ""), baseUrl.origin + "/")
           : new URL(baseUrl.toString());
+        if (target.origin !== baseUrl.origin) {
+          return new Response("Invalid content path.", { status: 400 });
+        }
         url.searchParams.delete("t");
         url.searchParams.forEach((v, k) => target.searchParams.set(k, v));
 
