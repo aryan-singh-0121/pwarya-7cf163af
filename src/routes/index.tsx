@@ -342,7 +342,7 @@ function PaymentSection({
             <select
               id="planqr"
               value={form.planCode}
-              onChange={(e) => set("planCode", e.target.value)}
+              onChange={(e) => onPlanChange(e.target.value)}
               className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="">Select a plan</option>
