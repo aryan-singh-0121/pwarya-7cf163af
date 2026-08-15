@@ -217,10 +217,14 @@ function PaymentSection({
   qrUrl,
   upi,
   plans,
+  planCode,
+  onPlanChange,
 }: {
   qrUrl: string | null;
   upi: string;
   plans: { code: string; name: string; price_inr: number }[];
+  planCode: string;
+  onPlanChange: (code: string) => void;
 }) {
   const [form, setForm] = useState({
     holderName: "",
@@ -234,6 +238,12 @@ function PaymentSection({
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [payQr, setPayQr] = useState<string | null>(null);
+
+  // Keeps the pricing cards ("Choose") and the dropdown in sync.
+  useEffect(() => {
+    setForm((f) => (f.planCode === planCode ? f : { ...f, planCode }));
+  }, [planCode]);
+
 
   const plan = plans.find((p) => p.code === form.planCode) ?? null;
   const upiLink = buildUpiLink({
