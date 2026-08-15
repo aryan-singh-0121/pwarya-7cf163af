@@ -736,6 +736,22 @@ function SettingsPanel({ settings, refresh }: { settings: any; refresh: () => vo
             onChange={(e) => setForm({ ...form, demo_video_url: e.target.value })}
           />
         </div>
+        <div>
+          <Label>Home popup video URL (YouTube)</Label>
+          <Input
+            placeholder="Leave empty to reuse the demo video"
+            value={form.video_popup_url}
+            onChange={(e) => setForm({ ...form, video_popup_url: e.target.value })}
+          />
+          <label className="mt-2 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.video_popup_enabled}
+              onChange={(e) => setForm({ ...form, video_popup_enabled: e.target.checked })}
+            />
+            Show video popup on the home screen
+          </label>
+        </div>
         <div className="sm:col-span-2">
           <Label>Members content URL (hidden from users)</Label>
           <Input
@@ -743,6 +759,7 @@ function SettingsPanel({ settings, refresh }: { settings: any; refresh: () => vo
             onChange={(e) => setForm({ ...form, content_url: e.target.value })}
           />
         </div>
+
       </div>
       <div>
         <Label>Payment QR image</Label>
