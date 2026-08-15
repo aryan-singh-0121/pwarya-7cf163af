@@ -2,7 +2,15 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { LogOut, User, ShieldAlert, RefreshCw } from "lucide-react";
+import {
+  LogOut,
+  User,
+  ShieldAlert,
+  RefreshCw,
+  Rocket,
+  Maximize2,
+  ExternalLink,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +20,7 @@ import {
   changeMyPassword,
   endDeviceSession,
   getMemberState,
+  getPortalTarget,
   sendFeedback,
 } from "@/lib/member.functions";
 import { getDeviceId } from "@/hooks/useDeviceId";
@@ -106,13 +115,7 @@ function Dashboard() {
           </Button>
         </div>
       ) : tab === "study" ? (
-        <iframe
-          key={s.portalToken}
-          title="Premium study batches"
-          src={`/api/portal/?t=${encodeURIComponent(s.portalToken ?? "")}`}
-          className="min-h-0 flex-1 border-0"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
-        />
+        <BatchLauncher portalToken={s.portalToken ?? ""} planCode={s.subscription?.plan_code ?? ""} />
       ) : (
         <ProfilePanel
           profile={s.profile}
@@ -138,6 +141,112 @@ type Sub = {
   starts_at: string | null;
   expires_at: string | null;
 } | null;
+
+
+function BatchLauncher({ portalToken, planCode }: { portalToken: string; planCode: string }) {
+  const [reader, setReader] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const [autoLaunch, setAutoLaunch] = useState(false);
+
+  const readerSrc = `/api/portal/?t=${encodeURIComponent(portalToken)}`;
+
+  async function launch() {
+    setOpening(true);
+    try {
+      const res = await getPortalTarget();
+      if (!res.url) {
+        toast.error(res.reason ?? "Access unavailable");
+        return;
+      }
+      // Opened straight from the member's own browser: no proxy, no referrer,
+      // so upstream bot protection sees a normal visitor and never blocks it.
+      const win = window.open(res.url, "_blank", "noopener,noreferrer");
+      if (!win) toast.error("Please allow pop-ups so your batches can open");
+    } catch {
+      toast.error("Could not open your batches. Try again.");
+    } finally {
+      setOpening(false);
+    }
+  }
+
+  // Optional one-tap experience: auto-clicks the launch button for the member.
+  useEffect(() => {
+    if (!autoLaunch) return;
+    const t = setTimeout(() => {
+      void launch();
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoLaunch]);
+
+  if (reader) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex items-center justify-between border-b border-border px-4 py-2 text-xs text-muted-foreground">
+          <span>Secure reader — content is streamed through PW ARYA</span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setReader(false)}>
+              Back
+            </Button>
+            <Button size="sm" variant="secondary" onClick={launch}>
+              <ExternalLink className="mr-1 h-3.5 w-3.5" /> Open full speed
+            </Button>
+          </div>
+        </div>
+        <iframe
+          key={portalToken}
+          title="Premium study batches"
+          src={readerSrc}
+          className="min-h-0 flex-1 border-0"
+          referrerPolicy="no-referrer"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-1 items-center justify-center px-5 py-10">
+      <div className="glow-card w-full max-w-xl rounded-3xl p-8 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/15">
+          <Rocket className="h-8 w-8 text-primary" />
+        </div>
+        <h1 className="mt-5 font-display text-4xl tracking-wide">Your batches are ready</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Membership active{planCode ? ` · ${planCode.toUpperCase()} plan` : ""}. Tap below to open
+          every premium batch, lecture and note.
+        </p>
+
+        <Button size="lg" className="mt-7 w-full text-lg" onClick={launch} disabled={opening}>
+          <Rocket className="mr-2 h-5 w-5" />
+          {opening ? "Opening..." : "Open batches"}
+        </Button>
+
+        <Button
+          size="lg"
+          variant="secondary"
+          className="mt-3 w-full"
+          onClick={() => setReader(true)}
+        >
+          <Maximize2 className="mr-2 h-4 w-4" /> Open inside PW ARYA (secure reader)
+        </Button>
+
+        <label className="mt-5 flex cursor-pointer items-center justify-center gap-2 text-sm text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={autoLaunch}
+            onChange={(e) => setAutoLaunch(e.target.checked)}
+            className="h-4 w-4 accent-[hsl(var(--primary))]"
+          />
+          Auto-open my batches when I land here
+        </label>
+        <p className="mt-4 text-xs text-muted-foreground">
+          Your session stays locked to this device. Sharing your login logs you out everywhere.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function ProfilePanel({
   profile,
