@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { startDeviceSession } from "@/lib/member.functions";
-import { resolveLoginIdentifier } from "@/lib/public.functions";
+import { memberSignIn } from "@/lib/public.functions";
 import { getDeviceId } from "@/hooks/useDeviceId";
 
 export const Route = createFileRoute("/login")({
@@ -43,12 +43,15 @@ function LoginPage() {
     }
     setBusy(true);
     try {
-      const { email } = await resolveLoginIdentifier({ data: { identifier } });
-      if (!email) {
-        toast.error("No account found for these details");
+      const signIn = await memberSignIn({ data: { identifier, password } });
+      if (!signIn.ok) {
+        toast.error(signIn.error ?? "Invalid credentials");
         return;
       }
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.setSession({
+        access_token: signIn.accessToken,
+        refresh_token: signIn.refreshToken,
+      });
       if (error) {
         toast.error("Invalid credentials");
         return;

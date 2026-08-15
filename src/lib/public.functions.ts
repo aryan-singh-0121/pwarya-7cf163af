@@ -180,44 +180,78 @@ export const trackUtr = createServerFn({ method: "POST" })
  * Members may log in with email, 10-digit phone number, or their access key.
  * This resolves any of those to the account email for the password sign-in.
  */
-export const resolveLoginIdentifier = createServerFn({ method: "POST" })
+/**
+ * Resolves email/phone/access-key AND signs in, entirely server-side.
+ * Never echoes the account email back, so the endpoint cannot be used to
+ * enumerate members or harvest addresses.
+ */
+export const memberSignIn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({ identifier: z.string().trim().min(3).max(255) }).parse(d),
+    z
+      .object({
+        identifier: z.string().trim().min(3).max(255),
+        password: z.string().min(1).max(200),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const raw = data.identifier.trim();
 
-    if (raw.includes("@")) return { email: raw.toLowerCase() };
-
-    if (/^[0-9]{10}$/.test(raw)) {
+    let email: string | null = null;
+    if (raw.includes("@")) {
+      email = raw.toLowerCase();
+    } else if (/^[0-9]{10}$/.test(raw)) {
       const { data: byPhone } = await supabaseAdmin
         .from("profiles")
         .select("email")
         .eq("phone", raw)
         .maybeSingle();
-      return { email: byPhone?.email ?? null };
+      email = byPhone?.email ?? null;
+    } else {
+      const key = raw.toUpperCase();
+      const { data: sub } = await supabaseAdmin
+        .from("subscriptions")
+        .select("user_id")
+        .eq("access_key", key)
+        .maybeSingle();
+      if (sub) {
+        const { data: p } = await supabaseAdmin
+          .from("profiles")
+          .select("email")
+          .eq("id", sub.user_id)
+          .maybeSingle();
+        email = p?.email ?? null;
+      } else {
+        const { data: req } = await supabaseAdmin
+          .from("payment_requests")
+          .select("email")
+          .eq("access_key", key)
+          .eq("status", "approved")
+          .maybeSingle();
+        email = req?.email ?? null;
+      }
     }
 
-    const key = raw.toUpperCase();
-    const { data: sub } = await supabaseAdmin
-      .from("subscriptions")
-      .select("user_id")
-      .eq("access_key", key)
-      .maybeSingle();
-    if (sub) {
-      const { data: p } = await supabaseAdmin
-        .from("profiles")
-        .select("email")
-        .eq("id", sub.user_id)
-        .maybeSingle();
-      return { email: p?.email ?? null };
-    }
-    const { data: req } = await supabaseAdmin
-      .from("payment_requests")
-      .select("email")
-      .eq("access_key", key)
-      .eq("status", "approved")
-      .maybeSingle();
-    return { email: req?.email ?? null };
+    // Same generic failure for "unknown identifier" and "wrong password".
+    const fail = { ok: false as const, error: "Invalid credentials" };
+    if (!email) return fail;
+
+    const { createClient } = await import("@supabase/supabase-js");
+    const authClient = createClient(
+      process.env["SUPABASE_URL"]!,
+      process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"]!,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
+    const { data: signed, error } = await authClient.auth.signInWithPassword({
+      email,
+      password: data.password,
+    });
+    if (error || !signed.session) return fail;
+
+    return {
+      ok: true as const,
+      accessToken: signed.session.access_token,
+      refreshToken: signed.session.refresh_token,
+    };
   });

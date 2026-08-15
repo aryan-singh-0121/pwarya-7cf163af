@@ -8,11 +8,11 @@ export const Route = createFileRoute("/api/public/hooks/maintenance")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // Server-only shared secret; never shipped to the browser.
         const key =
-          request.headers.get("apikey") ??
+          request.headers.get("x-maintenance-secret") ??
           request.headers.get("authorization")?.replace("Bearer ", "");
-        const expected =
-          process.env["SUPABASE_PUBLISHABLE_KEY"] ?? process.env["SUPABASE_ANON_KEY"];
+        const expected = process.env["MAINTENANCE_SECRET"];
         if (!key || !expected || key !== expected) {
           return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
         }
