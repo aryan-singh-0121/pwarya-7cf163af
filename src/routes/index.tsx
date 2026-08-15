@@ -246,11 +246,26 @@ function PaymentSection({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.planCode) return toast.error("Please select a plan");
-    if (!/^[0-9]{10}$/.test(form.phone)) return toast.error("Phone number must be 10 digits");
-    if (strength.score < 4) return toast.error("Please choose a stronger password");
-    if (!/^[0-9]{12}$/.test(form.utr)) return toast.error("UTR must be exactly 12 digits");
-    if (!file) return toast.error("Please attach your payment screenshot");
+    if (!form.planCode) {
+      toast.error("Please select a plan");
+      return;
+    }
+    if (!/^[0-9]{10}$/.test(form.phone)) {
+      toast.error("Phone number must be 10 digits");
+      return;
+    }
+    if (strength.score < 4) {
+      toast.error("Please choose a stronger password");
+      return;
+    }
+    if (!/^[0-9]{12}$/.test(form.utr)) {
+      toast.error("UTR must be exactly 12 digits");
+      return;
+    }
+    if (!file) {
+      toast.error("Please attach your payment screenshot");
+      return;
+    }
 
     setBusy(true);
     try {
