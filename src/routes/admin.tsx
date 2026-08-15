@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   adminAssetUploadUrl,
   adminCreateUser,
+  adminDeletePaymentRequest,
+
   adminDeleteUser,
   adminLogin,
   adminLogout,
