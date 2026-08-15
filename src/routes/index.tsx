@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TypingLoop } from "@/components/TypingLoop";
 import { SupportPopup } from "@/components/SupportPopup";
+import { VideoPopup } from "@/components/VideoPopup";
+
 import { fetchPlans, fetchSettings, youtubeEmbed, passwordScore } from "@/lib/site";
 import { buildUpiLink } from "@/lib/upi";
 import {
@@ -53,8 +55,10 @@ function Home() {
   const plans = useQuery({ queryKey: ["plans"], queryFn: fetchPlans, refetchInterval: 20000 });
   const s = settings.data;
 
+  const [planCode, setPlanCode] = useState("");
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   useEffect(() => {
+
     if (!s?.qr_path) {
       setQrUrl(null);
       return;
@@ -147,8 +151,16 @@ function Home() {
               <p className="mt-1 text-xs text-muted-foreground">
                 {p.duration_days >= 3650 ? "Lifetime access" : `${p.duration_days} days access`}
               </p>
-              <Button asChild className="mt-4 w-full" size="sm">
-                <a href="#pay">Choose</a>
+              <Button
+                className="mt-4 w-full"
+                size="sm"
+                variant={planCode === p.code ? "secondary" : "default"}
+                onClick={() => {
+                  setPlanCode(p.code);
+                  document.getElementById("pay")?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                {planCode === p.code ? "Selected" : "Choose"}
               </Button>
             </div>
           ))}
@@ -172,7 +184,13 @@ function Home() {
         </section>
       ) : null}
 
-      <PaymentSection qrUrl={qrUrl} upi={s?.upi_id ?? ""} plans={plans.data ?? []} />
+      <PaymentSection
+        qrUrl={qrUrl}
+        upi={s?.upi_id ?? ""}
+        plans={plans.data ?? []}
+        planCode={planCode}
+        onPlanChange={setPlanCode}
+      />
 
       <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
         <p>© {new Date().getFullYear()} PW ARYA. All rights reserved.</p>
@@ -180,6 +198,11 @@ function Home() {
           Admin
         </Link>
       </footer>
+
+      <VideoPopup
+        enabled={!!s?.video_popup_enabled}
+        url={s?.video_popup_url || s?.demo_video_url || ""}
+      />
 
       <SupportPopup
         link={s?.telegram_link ?? ""}
@@ -189,14 +212,19 @@ function Home() {
   );
 }
 
+
 function PaymentSection({
   qrUrl,
   upi,
   plans,
+  planCode,
+  onPlanChange,
 }: {
   qrUrl: string | null;
   upi: string;
   plans: { code: string; name: string; price_inr: number }[];
+  planCode: string;
+  onPlanChange: (code: string) => void;
 }) {
   const [form, setForm] = useState({
     holderName: "",
@@ -210,6 +238,12 @@ function PaymentSection({
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [payQr, setPayQr] = useState<string | null>(null);
+
+  // Keeps the pricing cards ("Choose") and the dropdown in sync.
+  useEffect(() => {
+    setForm((f) => (f.planCode === planCode ? f : { ...f, planCode }));
+  }, [planCode]);
+
 
   const plan = plans.find((p) => p.code === form.planCode) ?? null;
   const upiLink = buildUpiLink({
@@ -308,7 +342,7 @@ function PaymentSection({
             <select
               id="planqr"
               value={form.planCode}
-              onChange={(e) => set("planCode", e.target.value)}
+              onChange={(e) => onPlanChange(e.target.value)}
               className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="">Select a plan</option>

@@ -27,6 +27,8 @@ export type Database = {
           telegram_link: string
           updated_at: string
           upi_id: string
+          video_popup_enabled: boolean
+          video_popup_url: string
         }
         Insert: {
           content_url?: string
@@ -40,6 +42,8 @@ export type Database = {
           telegram_link?: string
           updated_at?: string
           upi_id?: string
+          video_popup_enabled?: boolean
+          video_popup_url?: string
         }
         Update: {
           content_url?: string
@@ -53,6 +57,8 @@ export type Database = {
           telegram_link?: string
           updated_at?: string
           upi_id?: string
+          video_popup_enabled?: boolean
+          video_popup_url?: string
         }
         Relationships: []
       }

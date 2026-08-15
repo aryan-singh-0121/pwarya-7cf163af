@@ -8,8 +8,9 @@ import {
   ShieldAlert,
   RefreshCw,
   Rocket,
-  Maximize2,
-  ExternalLink,
+  BookOpen,
+  Hand,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,6 @@ import {
   changeMyPassword,
   endDeviceSession,
   getMemberState,
-  getPortalTarget,
   sendFeedback,
 } from "@/lib/member.functions";
 import { getDeviceId } from "@/hooks/useDeviceId";
@@ -54,7 +54,7 @@ function Dashboard() {
   const state = useQuery({
     queryKey: ["member", deviceId],
     enabled: !!deviceId,
-    refetchInterval: 60000,
+    refetchInterval: 30000,
     queryFn: async () => {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
@@ -73,59 +73,101 @@ function Dashboard() {
 
   const s = state.data;
 
+  // Signed out remotely: the account was opened on another device.
+  useEffect(() => {
+    if (s && "evicted" in s && s.evicted) {
+      toast.error("Signed out — this account was opened on another device.");
+      void supabase.auth.signOut().then(() => navigate({ to: "/login" }));
+    }
+  }, [s, navigate]);
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="flex items-center justify-between border-b border-border px-4 py-3">
         <span className="animate-blink-logo font-display text-2xl tracking-[0.18em] text-primary">
           PWARYA
         </span>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant={tab === "study" ? "default" : "ghost"}
-            onClick={() => setTab("study")}
-          >
-            Study
-          </Button>
-          <Button
-            size="sm"
-            variant={tab === "profile" ? "default" : "ghost"}
-            onClick={() => setTab("profile")}
-          >
-            <User className="mr-1 h-4 w-4" /> Profile
-          </Button>
-          <Button size="sm" variant="secondary" onClick={logout}>
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
+        <span className="text-xs text-muted-foreground">Member area</span>
       </header>
 
-      {state.isLoading ? (
-        <div className="flex flex-1 items-center justify-center text-muted-foreground">
-          Loading your member area...
-        </div>
-      ) : !s ? null : !s.allowed ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-          <ShieldAlert className="h-10 w-10 text-destructive" />
-          <h1 className="font-display text-3xl tracking-wide">Access unavailable</h1>
-          <p className="max-w-md text-sm text-muted-foreground">{s.reason}</p>
-          <Button onClick={() => navigate({ to: "/" })}>Renew membership</Button>
-          <Button variant="ghost" onClick={() => state.refetch()}>
-            <RefreshCw className="mr-1 h-4 w-4" /> Retry
-          </Button>
-        </div>
-      ) : tab === "study" ? (
-        <BatchLauncher portalToken={s.portalToken ?? ""} planCode={s.subscription?.plan_code ?? ""} />
-      ) : (
-        <ProfilePanel
-          profile={s.profile}
-          subscription={s.subscription}
-          onRefresh={() => state.refetch()}
+      <main className="flex min-h-0 flex-1 flex-col pb-20">
+        {state.isLoading ? (
+          <div className="flex flex-1 items-center justify-center text-muted-foreground">
+            Loading your member area...
+          </div>
+        ) : !s ? null : !s.allowed ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+            <ShieldAlert className="h-10 w-10 text-destructive" />
+            <h1 className="font-display text-3xl tracking-wide">Access unavailable</h1>
+            <p className="max-w-md text-sm text-muted-foreground">{s.reason}</p>
+            <Button onClick={() => navigate({ to: "/" })}>Renew membership</Button>
+            <Button variant="ghost" onClick={() => state.refetch()}>
+              <RefreshCw className="mr-1 h-4 w-4" /> Retry
+            </Button>
+          </div>
+        ) : tab === "study" ? (
+          <BatchLauncher
+            portalToken={s.portalToken ?? ""}
+            planCode={s.subscription?.plan_code ?? ""}
+          />
+        ) : (
+          <ProfilePanel
+            profile={s.profile}
+            subscription={s.subscription}
+            onRefresh={() => state.refetch()}
+          />
+        )}
+      </main>
+
+      {/* Bottom navigation: Study · Profile · Logout */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-border bg-card/95 backdrop-blur">
+        <BottomTab
+          active={tab === "study"}
+          icon={<BookOpen className="h-5 w-5" />}
+          label="Study"
+          onClick={() => setTab("study")}
         />
-      )}
+        <BottomTab
+          active={tab === "profile"}
+          icon={<User className="h-5 w-5" />}
+          label="Profile"
+          onClick={() => setTab("profile")}
+        />
+        <BottomTab
+          active={false}
+          icon={<LogOut className="h-5 w-5" />}
+          label="Logout"
+          onClick={logout}
+        />
+      </nav>
     </div>
   );
 }
+
+function BottomTab({
+  active,
+  icon,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex flex-col items-center gap-1 py-3 text-xs font-semibold transition ${
+        active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
 
 type Profile = {
   full_name: string;
@@ -146,52 +188,30 @@ type Sub = {
 function BatchLauncher({ portalToken, planCode }: { portalToken: string; planCode: string }) {
   const [reader, setReader] = useState(false);
   const [opening, setOpening] = useState(false);
-  const [autoLaunch, setAutoLaunch] = useState(false);
+  const [hint, setHint] = useState(true);
 
+  // Everything is served through our own origin, so the source address is never shown.
   const readerSrc = `/api/portal/?t=${encodeURIComponent(portalToken)}`;
 
-  async function launch() {
-    setOpening(true);
-    try {
-      const res = await getPortalTarget();
-      if (!res.url) {
-        toast.error(res.reason ?? "Access unavailable");
-        return;
-      }
-      // Opened straight from the member's own browser: no proxy, no referrer,
-      // so upstream bot protection sees a normal visitor and never blocks it.
-      const win = window.open(res.url, "_blank", "noopener,noreferrer");
-      if (!win) toast.error("Please allow pop-ups so your batches can open");
-    } catch {
-      toast.error("Could not open your batches. Try again.");
-    } finally {
-      setOpening(false);
+  function open() {
+    if (!portalToken) {
+      toast.error("Access unavailable. Please refresh.");
+      return;
     }
+    setOpening(true);
+    setHint(false);
+    setReader(true);
+    setTimeout(() => setOpening(false), 600);
   }
-
-  // Optional one-tap experience: auto-clicks the launch button for the member.
-  useEffect(() => {
-    if (!autoLaunch) return;
-    const t = setTimeout(() => {
-      void launch();
-    }, 400);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoLaunch]);
 
   if (reader) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center justify-between border-b border-border px-4 py-2 text-xs text-muted-foreground">
-          <span>Secure reader — content is streamed through PW ARYA</span>
-          <div className="flex gap-2">
-            <Button size="sm" variant="ghost" onClick={() => setReader(false)}>
-              Back
-            </Button>
-            <Button size="sm" variant="secondary" onClick={launch}>
-              <ExternalLink className="mr-1 h-3.5 w-3.5" /> Open full speed
-            </Button>
-          </div>
+          <span className="font-semibold tracking-wide text-primary">PW ARYA · Study</span>
+          <Button size="sm" variant="ghost" onClick={() => setReader(false)}>
+            <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Back
+          </Button>
         </div>
         <iframe
           key={portalToken}
@@ -214,38 +234,32 @@ function BatchLauncher({ portalToken, planCode }: { portalToken: string; planCod
         <h1 className="mt-5 font-display text-4xl tracking-wide">Your batches are ready</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Membership active{planCode ? ` · ${planCode.toUpperCase()} plan` : ""}. Tap below to open
-          every premium batch, lecture and note.
+          every premium batch, lecture and note — right here inside PW ARYA.
         </p>
 
-        <Button size="lg" className="mt-7 w-full text-lg" onClick={launch} disabled={opening}>
-          <Rocket className="mr-2 h-5 w-5" />
-          {opening ? "Opening..." : "Open batches"}
-        </Button>
+        <div className="relative mt-8">
+          <Button size="lg" className="w-full text-lg" onClick={open} disabled={opening}>
+            <Rocket className="mr-2 h-5 w-5" />
+            {opening ? "Opening..." : "Open batches"}
+          </Button>
 
-        <Button
-          size="lg"
-          variant="secondary"
-          className="mt-3 w-full"
-          onClick={() => setReader(true)}
-        >
-          <Maximize2 className="mr-2 h-4 w-4" /> Open inside PW ARYA (secure reader)
-        </Button>
+          {hint ? (
+            <div className="pointer-events-none absolute -bottom-14 left-1/2 flex -translate-x-1/2 flex-col items-center">
+              <Hand className="h-9 w-9 animate-bounce text-accent drop-shadow" />
+              <span className="mt-1 rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
+                Tap here to start
+              </span>
+            </div>
+          ) : null}
+        </div>
 
-        <label className="mt-5 flex cursor-pointer items-center justify-center gap-2 text-sm text-muted-foreground">
-          <input
-            type="checkbox"
-            checked={autoLaunch}
-            onChange={(e) => setAutoLaunch(e.target.checked)}
-            className="h-4 w-4 accent-[hsl(var(--primary))]"
-          />
-          Auto-open my batches when I land here
-        </label>
-        <p className="mt-4 text-xs text-muted-foreground">
-          Your session stays locked to this device. Sharing your login logs you out everywhere.
+        <p className="mt-20 text-xs text-muted-foreground">
+          Your session stays locked to this device. Logging in elsewhere signs this device out.
         </p>
       </div>
     </div>
   );
+
 }
 
 function ProfilePanel({

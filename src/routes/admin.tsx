@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   adminAssetUploadUrl,
   adminCreateUser,
+  adminDeletePaymentRequest,
+
   adminDeleteUser,
   adminLogin,
   adminLogout,
@@ -224,10 +226,39 @@ function Payments({ requests, refresh }: { requests: any[]; refresh: () => void 
     refresh();
   }
 
+  async function removeRequest(id: string) {
+    const res = await adminDeletePaymentRequest({ data: { id } });
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    toast.success("Request deleted");
+    refresh();
+  }
+
+  const rejected = requests.filter((r) => r.status === "denied");
+
   return (
     <div className="space-y-4">
-      <h2 className="font-display text-2xl tracking-wide">Payment requests</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-2xl tracking-wide">Payment requests</h2>
+        {rejected.length ? (
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={async () => {
+              if (!confirm(`Delete all ${rejected.length} rejected requests?`)) return;
+              for (const r of rejected) await adminDeletePaymentRequest({ data: { id: r.id } });
+              toast.success("Rejected requests cleared");
+              refresh();
+            }}
+          >
+            Clear {rejected.length} rejected
+          </Button>
+        ) : null}
+      </div>
       {requests.length === 0 ? <p className="text-muted-foreground">No requests yet.</p> : null}
+
       {requests.map((r) => (
         <div key={r.id} className="glow-card grid gap-4 rounded-2xl p-5 sm:grid-cols-[180px_1fr]">
           {r.proofUrl ? (
@@ -328,6 +359,19 @@ function Payments({ requests, refresh }: { requests: any[]; refresh: () => void 
                 </div>
               )
             ) : null}
+
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive"
+              onClick={() => {
+                if (!confirm(`Permanently delete this request from ${r.holder_name}?`)) return;
+                void removeRequest(r.id);
+              }}
+            >
+              Delete this record
+            </Button>
+
           </div>
         </div>
       ))}
@@ -602,6 +646,8 @@ function SettingsPanel({ settings, refresh }: { settings: any; refresh: () => vo
     support_message: "",
     services_text: "",
     demo_video_url: "",
+    video_popup_enabled: false,
+    video_popup_url: "",
     content_url: "https://pwthor.live/study/batches",
     highlights: "",
     marquee_lines: "",
@@ -616,11 +662,14 @@ function SettingsPanel({ settings, refresh }: { settings: any; refresh: () => vo
       support_message: settings.support_message ?? "",
       services_text: settings.services_text ?? "",
       demo_video_url: settings.demo_video_url ?? "",
+      video_popup_enabled: !!settings.video_popup_enabled,
+      video_popup_url: settings.video_popup_url ?? "",
       content_url: settings.content_url ?? "https://pwthor.live/study/batches",
       highlights: (settings.highlights ?? []).join("\n"),
       marquee_lines: (settings.marquee_lines ?? []).join("\n"),
     });
   }, [settings]);
+
 
   async function uploadQr(file: File) {
     const ext = (file.name.split(".").pop() ?? "png").toLowerCase();
@@ -687,6 +736,22 @@ function SettingsPanel({ settings, refresh }: { settings: any; refresh: () => vo
             onChange={(e) => setForm({ ...form, demo_video_url: e.target.value })}
           />
         </div>
+        <div>
+          <Label>Home popup video URL (YouTube)</Label>
+          <Input
+            placeholder="Leave empty to reuse the demo video"
+            value={form.video_popup_url}
+            onChange={(e) => setForm({ ...form, video_popup_url: e.target.value })}
+          />
+          <label className="mt-2 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.video_popup_enabled}
+              onChange={(e) => setForm({ ...form, video_popup_enabled: e.target.checked })}
+            />
+            Show video popup on the home screen
+          </label>
+        </div>
         <div className="sm:col-span-2">
           <Label>Members content URL (hidden from users)</Label>
           <Input
@@ -694,6 +759,7 @@ function SettingsPanel({ settings, refresh }: { settings: any; refresh: () => vo
             onChange={(e) => setForm({ ...form, content_url: e.target.value })}
           />
         </div>
+
       </div>
       <div>
         <Label>Payment QR image</Label>

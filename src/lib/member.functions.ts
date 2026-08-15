@@ -110,19 +110,24 @@ export const startDeviceSession = createServerFn({ method: "POST" })
     }
 
     if (other) {
+      // New device wins: every other device is signed out immediately and the
+      // takeover is reported to the admin security section.
+      await supabaseAdmin
+        .from("device_sessions")
+        .update({ is_active: false })
+        .eq("user_id", userId)
+        .neq("device_id", data.deviceId);
+
       const { writeAudit } = await import("./audit.server");
       await writeAudit({
-        action: "device_lock_violation",
+        action: "device_lock_takeover",
         targetType: "user",
         targetId: userId,
         email,
-        details: { attemptedDevice: data.deviceId, activeDevice: other.device_id, ip },
+        details: { newDevice: data.deviceId, loggedOutDevice: other.device_id, ip },
       });
-      return {
-        ok: false as const,
-        error: "This account is already active on another device. Log out there first.",
-      };
     }
+
 
     const access = await evaluateAccess(userId);
     if (!access.allowed) return { ok: false as const, error: access.reason! };
@@ -163,28 +168,31 @@ export const getMemberState = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const userId = context.userId;
 
-    const { data: session } = await supabaseAdmin
+    const { data: sessions } = await supabaseAdmin
       .from("device_sessions")
       .select("device_id")
       .eq("user_id", userId)
-      .eq("is_active", true)
-      .maybeSingle();
-    if (session && session.device_id !== data.deviceId) {
+      .eq("is_active", true);
+    const mine = (sessions ?? []).some((s) => s.device_id === data.deviceId);
+    if ((sessions ?? []).length > 0 && !mine) {
+      // This device was signed out because the account was opened elsewhere.
       return {
         allowed: false as const,
-        reason: "Your account is being used on another device.",
+        evicted: true as const,
+        reason: "You were signed out because this account was opened on another device.",
         profile: null,
         subscription: null,
         portalToken: null,
       };
     }
-    if (session) {
+    if (mine) {
       await supabaseAdmin
         .from("device_sessions")
         .update({ last_seen: new Date().toISOString() })
         .eq("user_id", userId)
         .eq("device_id", data.deviceId);
     }
+
 
     const access = await evaluateAccess(userId);
     const { data: profile } = await supabaseAdmin
@@ -208,11 +216,13 @@ export const getMemberState = createServerFn({ method: "POST" })
 
     return {
       allowed: access.allowed,
+      evicted: false as const,
       reason: access.reason ?? null,
       profile,
       subscription: sub,
       portalToken,
     };
+
   });
 
 export const changeMyPassword = createServerFn({ method: "POST" })

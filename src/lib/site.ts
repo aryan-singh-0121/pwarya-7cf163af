@@ -16,10 +16,13 @@ export type Settings = {
   support_message: string;
   services_text: string;
   demo_video_url: string;
+  video_popup_enabled: boolean;
+  video_popup_url: string;
   highlights: string[];
   marquee_lines: string[];
   content_url: string;
 };
+
 
 export async function fetchSettings(): Promise<Settings | null> {
   const { data } = await supabase.from("app_settings").select("*").eq("id", 1).maybeSingle();
