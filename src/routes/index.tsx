@@ -147,8 +147,16 @@ function Home() {
               <p className="mt-1 text-xs text-muted-foreground">
                 {p.duration_days >= 3650 ? "Lifetime access" : `${p.duration_days} days access`}
               </p>
-              <Button asChild className="mt-4 w-full" size="sm">
-                <a href="#pay">Choose</a>
+              <Button
+                className="mt-4 w-full"
+                size="sm"
+                variant={planCode === p.code ? "secondary" : "default"}
+                onClick={() => {
+                  setPlanCode(p.code);
+                  document.getElementById("pay")?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                {planCode === p.code ? "Selected" : "Choose"}
               </Button>
             </div>
           ))}
@@ -172,7 +180,13 @@ function Home() {
         </section>
       ) : null}
 
-      <PaymentSection qrUrl={qrUrl} upi={s?.upi_id ?? ""} plans={plans.data ?? []} />
+      <PaymentSection
+        qrUrl={qrUrl}
+        upi={s?.upi_id ?? ""}
+        plans={plans.data ?? []}
+        planCode={planCode}
+        onPlanChange={setPlanCode}
+      />
 
       <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
         <p>© {new Date().getFullYear()} PW ARYA. All rights reserved.</p>
@@ -181,6 +195,11 @@ function Home() {
         </Link>
       </footer>
 
+      <VideoPopup
+        enabled={!!s?.video_popup_enabled}
+        url={s?.video_popup_url || s?.demo_video_url || ""}
+      />
+
       <SupportPopup
         link={s?.telegram_link ?? ""}
         message={s?.support_message ?? "Chat with us on Telegram."}
@@ -188,6 +207,7 @@ function Home() {
     </div>
   );
 }
+
 
 function PaymentSection({
   qrUrl,
