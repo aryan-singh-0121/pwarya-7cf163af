@@ -646,6 +646,8 @@ function SettingsPanel({ settings, refresh }: { settings: any; refresh: () => vo
     support_message: "",
     services_text: "",
     demo_video_url: "",
+    video_popup_enabled: false,
+    video_popup_url: "",
     content_url: "https://pwthor.live/study/batches",
     highlights: "",
     marquee_lines: "",
@@ -660,11 +662,14 @@ function SettingsPanel({ settings, refresh }: { settings: any; refresh: () => vo
       support_message: settings.support_message ?? "",
       services_text: settings.services_text ?? "",
       demo_video_url: settings.demo_video_url ?? "",
+      video_popup_enabled: !!settings.video_popup_enabled,
+      video_popup_url: settings.video_popup_url ?? "",
       content_url: settings.content_url ?? "https://pwthor.live/study/batches",
       highlights: (settings.highlights ?? []).join("\n"),
       marquee_lines: (settings.marquee_lines ?? []).join("\n"),
     });
   }, [settings]);
+
 
   async function uploadQr(file: File) {
     const ext = (file.name.split(".").pop() ?? "png").toLowerCase();
