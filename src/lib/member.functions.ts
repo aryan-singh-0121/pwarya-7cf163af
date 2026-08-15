@@ -168,28 +168,31 @@ export const getMemberState = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const userId = context.userId;
 
-    const { data: session } = await supabaseAdmin
+    const { data: sessions } = await supabaseAdmin
       .from("device_sessions")
       .select("device_id")
       .eq("user_id", userId)
-      .eq("is_active", true)
-      .maybeSingle();
-    if (session && session.device_id !== data.deviceId) {
+      .eq("is_active", true);
+    const mine = (sessions ?? []).some((s) => s.device_id === data.deviceId);
+    if ((sessions ?? []).length > 0 && !mine) {
+      // This device was signed out because the account was opened elsewhere.
       return {
         allowed: false as const,
-        reason: "Your account is being used on another device.",
+        evicted: true as const,
+        reason: "You were signed out because this account was opened on another device.",
         profile: null,
         subscription: null,
         portalToken: null,
       };
     }
-    if (session) {
+    if (mine) {
       await supabaseAdmin
         .from("device_sessions")
         .update({ last_seen: new Date().toISOString() })
         .eq("user_id", userId)
         .eq("device_id", data.deviceId);
     }
+
 
     const access = await evaluateAccess(userId);
     const { data: profile } = await supabaseAdmin
