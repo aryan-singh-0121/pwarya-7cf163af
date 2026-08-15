@@ -110,19 +110,24 @@ export const startDeviceSession = createServerFn({ method: "POST" })
     }
 
     if (other) {
+      // New device wins: every other device is signed out immediately and the
+      // takeover is reported to the admin security section.
+      await supabaseAdmin
+        .from("device_sessions")
+        .update({ is_active: false })
+        .eq("user_id", userId)
+        .neq("device_id", data.deviceId);
+
       const { writeAudit } = await import("./audit.server");
       await writeAudit({
-        action: "device_lock_violation",
+        action: "device_lock_takeover",
         targetType: "user",
         targetId: userId,
         email,
-        details: { attemptedDevice: data.deviceId, activeDevice: other.device_id, ip },
+        details: { newDevice: data.deviceId, loggedOutDevice: other.device_id, ip },
       });
-      return {
-        ok: false as const,
-        error: "This account is already active on another device. Log out there first.",
-      };
     }
+
 
     const access = await evaluateAccess(userId);
     if (!access.allowed) return { ok: false as const, error: access.reason! };
