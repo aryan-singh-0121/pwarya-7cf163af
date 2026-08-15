@@ -216,11 +216,13 @@ export const getMemberState = createServerFn({ method: "POST" })
 
     return {
       allowed: access.allowed,
+      evicted: false as const,
       reason: access.reason ?? null,
       profile,
       subscription: sub,
       portalToken,
     };
+
   });
 
 export const changeMyPassword = createServerFn({ method: "POST" })
