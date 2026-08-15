@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TypingLoop } from "@/components/TypingLoop";
 import { SupportPopup } from "@/components/SupportPopup";
+import { VideoPopup } from "@/components/VideoPopup";
+
 import { fetchPlans, fetchSettings, youtubeEmbed, passwordScore } from "@/lib/site";
 import { buildUpiLink } from "@/lib/upi";
 import {
@@ -53,8 +55,10 @@ function Home() {
   const plans = useQuery({ queryKey: ["plans"], queryFn: fetchPlans, refetchInterval: 20000 });
   const s = settings.data;
 
+  const [planCode, setPlanCode] = useState("");
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   useEffect(() => {
+
     if (!s?.qr_path) {
       setQrUrl(null);
       return;
