@@ -11,6 +11,7 @@ import {
   BookOpen,
   Hand,
   ArrowLeft,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +22,11 @@ import {
   changeMyPassword,
   endDeviceSession,
   getMemberState,
+  getMyNotifications,
+  markNotificationsRead,
   sendFeedback,
 } from "@/lib/member.functions";
+
 import { getDeviceId } from "@/hooks/useDeviceId";
 import { passwordScore } from "@/lib/site";
 
@@ -46,7 +50,7 @@ export const Route = createFileRoute("/dashboard")({
 
 function Dashboard() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"study" | "profile">("study");
+  const [tab, setTab] = useState<"study" | "alerts" | "profile">("study");
   const [deviceId, setDeviceId] = useState("");
 
   useEffect(() => setDeviceId(getDeviceId()), []);
@@ -110,6 +114,8 @@ function Dashboard() {
             portalToken={s.portalToken ?? ""}
             planCode={s.subscription?.plan_code ?? ""}
           />
+        ) : tab === "alerts" ? (
+          <NotificationsPanel />
         ) : (
           <ProfilePanel
             profile={s.profile}
@@ -119,13 +125,19 @@ function Dashboard() {
         )}
       </main>
 
-      {/* Bottom navigation: Study · Profile · Logout */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-border bg-card/95 backdrop-blur">
+      {/* Bottom navigation: Study · Notifications · Profile · Logout */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-card/95 backdrop-blur">
         <BottomTab
           active={tab === "study"}
           icon={<BookOpen className="h-5 w-5" />}
           label="Study"
           onClick={() => setTab("study")}
+        />
+        <BottomTab
+          active={tab === "alerts"}
+          icon={<Bell className="h-5 w-5" />}
+          label="Alerts"
+          onClick={() => setTab("alerts")}
         />
         <BottomTab
           active={tab === "profile"}
@@ -140,6 +152,7 @@ function Dashboard() {
           onClick={logout}
         />
       </nav>
+
     </div>
   );
 }
@@ -206,24 +219,31 @@ function BatchLauncher({ portalToken, planCode }: { portalToken: string; planCod
 
   if (reader) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center justify-between border-b border-border px-4 py-2 text-xs text-muted-foreground">
+      <div className="flex min-h-0 flex-1 flex-col bg-black">
+        <div className="flex items-center justify-between border-b border-black bg-black px-4 py-2 text-xs text-muted-foreground">
           <span className="font-semibold tracking-wide text-primary">PW ARYA · Study</span>
           <Button size="sm" variant="ghost" onClick={() => setReader(false)}>
             <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Back
           </Button>
         </div>
-        <iframe
-          key={portalToken}
-          title="Premium study batches"
-          src={readerSrc}
-          className="min-h-0 flex-1 border-0"
-          referrerPolicy="no-referrer"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
-        />
+        {/* The top strip of the embedded page (where any address/branding would show)
+            is pulled up behind an opaque black mask, so nothing outside PW ARYA is visible. */}
+        <div className="relative min-h-0 flex-1 overflow-hidden">
+          <iframe
+            key={portalToken}
+            title="Premium study batches"
+            src={readerSrc}
+            className="absolute inset-x-0 border-0"
+            style={{ top: "-56px", height: "calc(100% + 56px)", width: "100%" }}
+            referrerPolicy="no-referrer"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+          />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[0.4rem] bg-black" />
+        </div>
       </div>
     );
   }
+
 
   return (
     <div className="flex flex-1 items-center justify-center px-5 py-10">
@@ -388,6 +408,54 @@ function ProfilePanel({
         />
         <Button type="submit">Send</Button>
       </form>
+    </div>
+  );
+}
+
+function NotificationsPanel() {
+  const list = useQuery({
+    queryKey: ["notifications"],
+    queryFn: () => getMyNotifications(),
+    refetchInterval: 30000,
+  });
+
+  useEffect(() => {
+    if (list.data?.items?.length) void markNotificationsRead();
+  }, [list.data]);
+
+  const items = list.data?.items ?? [];
+
+  return (
+    <div className="mx-auto w-full max-w-3xl space-y-4 px-5 py-8">
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-2xl tracking-wide">Notifications</h2>
+        <Button variant="ghost" size="sm" onClick={() => list.refetch()}>
+          <RefreshCw className="mr-1 h-4 w-4" /> Refresh
+        </Button>
+      </div>
+      {list.isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No notifications yet.</p>
+      ) : (
+        items.map((n) => (
+          <article key={n.id} className="glow-card rounded-2xl p-5">
+            <div className="flex items-center gap-2">
+              <Bell className="h-4 w-4 text-primary" />
+              <h3 className="font-semibold">{n.title}</h3>
+              {!n.read_at ? (
+                <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-bold uppercase text-accent">
+                  New
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{n.body}</p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {new Date(n.created_at).toLocaleString("en-GB", { hour12: false })}
+            </p>
+          </article>
+        ))
+      )}
     </div>
   );
 }
