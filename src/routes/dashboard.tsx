@@ -411,3 +411,51 @@ function ProfilePanel({
     </div>
   );
 }
+
+function NotificationsPanel() {
+  const list = useQuery({
+    queryKey: ["notifications"],
+    queryFn: () => getMyNotifications(),
+    refetchInterval: 30000,
+  });
+
+  useEffect(() => {
+    if (list.data?.items?.length) void markNotificationsRead();
+  }, [list.data]);
+
+  const items = list.data?.items ?? [];
+
+  return (
+    <div className="mx-auto w-full max-w-3xl space-y-4 px-5 py-8">
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-2xl tracking-wide">Notifications</h2>
+        <Button variant="ghost" size="sm" onClick={() => list.refetch()}>
+          <RefreshCw className="mr-1 h-4 w-4" /> Refresh
+        </Button>
+      </div>
+      {list.isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No notifications yet.</p>
+      ) : (
+        items.map((n) => (
+          <article key={n.id} className="glow-card rounded-2xl p-5">
+            <div className="flex items-center gap-2">
+              <Bell className="h-4 w-4 text-primary" />
+              <h3 className="font-semibold">{n.title}</h3>
+              {!n.read_at ? (
+                <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-bold uppercase text-accent">
+                  New
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{n.body}</p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {new Date(n.created_at).toLocaleString("en-GB", { hour12: false })}
+            </p>
+          </article>
+        ))
+      )}
+    </div>
+  );
+}
