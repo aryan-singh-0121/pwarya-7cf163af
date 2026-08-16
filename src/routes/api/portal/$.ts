@@ -108,13 +108,18 @@ export const Route = createFileRoute("/api/portal/$")({
                 html,
               ));
           if (challenged) {
+            // The upstream host is challenging our server-side fetch. Hand the load
+            // to the member's own browser inside this same frame: the visit then looks
+            // like an ordinary direct visit and the address stays hidden behind our UI.
             headers.set("x-portal-blocked", "1");
             headers.set("content-type", "text/html; charset=utf-8");
+            const escaped = target.toString().replace(/"/g, "&quot;");
             return new Response(
-              `<!doctype html><meta charset="utf-8"><body style="font-family:system-ui;background:#0b1020;color:#e8ecf7;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><p style="font-size:18px">Secure reader is warming up.</p><p style="opacity:.7">Use the <b>Open batches</b> button to launch your content.</p></div></body>`,
+              `<!doctype html><meta charset="utf-8"><title>PW ARYA · Study</title><body style="margin:0;background:#0b1020;color:#e8ecf7;font-family:system-ui"><div id="w" style="display:flex;align-items:center;justify-content:center;height:100vh;text-align:center"><p>Preparing your batches…</p></div><script>setTimeout(function(){location.replace("${escaped}")},250)</script></body>`,
               { status: 200, headers },
             );
           }
+
 
           const baseTag = `<base href="${baseUrl.origin}/">`;
           html = html.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
