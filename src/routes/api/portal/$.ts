@@ -9,7 +9,11 @@ const STRIP = new Set([
   "content-length",
   "transfer-encoding",
   "strict-transport-security",
+  // Never let the external content host write cookies onto our own origin.
+  "set-cookie",
+  "set-cookie2",
 ]);
+
 
 /**
  * Masked reader: streams the members-only content through our own origin so the
@@ -76,8 +80,10 @@ export const Route = createFileRoute("/api/portal/$")({
             "upgrade-insecure-requests": "1",
             referer: baseUrl.origin + "/",
           };
-          const cookie = request.headers.get("cookie");
-          if (cookie) fwd["cookie"] = cookie;
+          // Deliberately NOT forwarding the visitor's Cookie header: it would send
+          // our own site cookies (including the admin session) to a third-party host.
+
+
 
           upstream = await fetch(target.toString(), { headers: fwd, redirect: "follow" });
         } catch {
