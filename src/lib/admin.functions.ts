@@ -448,3 +448,51 @@ export const adminAssetUploadUrl = createServerFn({ method: "POST" })
     if (error || !signed) return { ok: false as const, error: "Upload failed." };
     return { ok: true as const, path, token: signed.token };
   });
+
+/** Remove a member's feedback / report entry. */
+export const adminDeleteFeedback = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const session = await requireAdmin();
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("feedback").delete().eq("id", data.id);
+    const { writeAudit } = await import("./audit.server");
+    await writeAudit({
+      actor: session.data.user ?? "admin",
+      action: "feedback_deleted",
+      targetType: "feedback",
+      targetId: data.id,
+    });
+    return { ok: true as const };
+  });
+
+/** Push a manual notification into a member's notification section. */
+export const adminSendNotification = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        userId: z.string().uuid(),
+        title: z.string().trim().min(2).max(80),
+        body: z.string().trim().min(2).max(1000),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const session = await requireAdmin();
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("notifications").insert({
+      user_id: data.userId,
+      title: data.title,
+      body: data.body,
+    });
+    if (error) return { ok: false as const, error: "Could not send the notification." };
+    const { writeAudit } = await import("./audit.server");
+    await writeAudit({
+      actor: session.data.user ?? "admin",
+      action: "notification_sent",
+      targetType: "user",
+      targetId: data.userId,
+      details: { title: data.title },
+    });
+    return { ok: true as const };
+  });

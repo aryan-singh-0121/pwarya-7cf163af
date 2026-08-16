@@ -312,3 +312,29 @@ export const getPortalTarget = createServerFn({ method: "POST" })
       reason: null as string | null,
     };
   });
+
+/** Notifications the admin sent to this member. */
+export const getMyNotifications = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("notifications")
+      .select("id, title, body, read_at, created_at")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    return { items: data ?? [] };
+  });
+
+export const markNotificationsRead = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("user_id", context.userId)
+      .is("read_at", null);
+    return { ok: true as const };
+  });
