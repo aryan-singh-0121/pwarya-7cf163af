@@ -11,6 +11,7 @@ import {
   BookOpen,
   Hand,
   ArrowLeft,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +22,11 @@ import {
   changeMyPassword,
   endDeviceSession,
   getMemberState,
+  getMyNotifications,
+  markNotificationsRead,
   sendFeedback,
 } from "@/lib/member.functions";
+
 import { getDeviceId } from "@/hooks/useDeviceId";
 import { passwordScore } from "@/lib/site";
 
@@ -46,7 +50,7 @@ export const Route = createFileRoute("/dashboard")({
 
 function Dashboard() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"study" | "profile">("study");
+  const [tab, setTab] = useState<"study" | "alerts" | "profile">("study");
   const [deviceId, setDeviceId] = useState("");
 
   useEffect(() => setDeviceId(getDeviceId()), []);
@@ -110,6 +114,8 @@ function Dashboard() {
             portalToken={s.portalToken ?? ""}
             planCode={s.subscription?.plan_code ?? ""}
           />
+        ) : tab === "alerts" ? (
+          <NotificationsPanel />
         ) : (
           <ProfilePanel
             profile={s.profile}
@@ -119,13 +125,19 @@ function Dashboard() {
         )}
       </main>
 
-      {/* Bottom navigation: Study · Profile · Logout */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-border bg-card/95 backdrop-blur">
+      {/* Bottom navigation: Study · Notifications · Profile · Logout */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-card/95 backdrop-blur">
         <BottomTab
           active={tab === "study"}
           icon={<BookOpen className="h-5 w-5" />}
           label="Study"
           onClick={() => setTab("study")}
+        />
+        <BottomTab
+          active={tab === "alerts"}
+          icon={<Bell className="h-5 w-5" />}
+          label="Alerts"
+          onClick={() => setTab("alerts")}
         />
         <BottomTab
           active={tab === "profile"}
@@ -140,6 +152,7 @@ function Dashboard() {
           onClick={logout}
         />
       </nav>
+
     </div>
   );
 }
