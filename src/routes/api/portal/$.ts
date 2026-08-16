@@ -9,7 +9,11 @@ const STRIP = new Set([
   "content-length",
   "transfer-encoding",
   "strict-transport-security",
+  // Never let the external content host write cookies onto our own origin.
+  "set-cookie",
+  "set-cookie2",
 ]);
+
 
 /**
  * Masked reader: streams the members-only content through our own origin so the
