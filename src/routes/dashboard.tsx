@@ -206,24 +206,31 @@ function BatchLauncher({ portalToken, planCode }: { portalToken: string; planCod
 
   if (reader) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center justify-between border-b border-border px-4 py-2 text-xs text-muted-foreground">
+      <div className="flex min-h-0 flex-1 flex-col bg-black">
+        <div className="flex items-center justify-between border-b border-black bg-black px-4 py-2 text-xs text-muted-foreground">
           <span className="font-semibold tracking-wide text-primary">PW ARYA · Study</span>
           <Button size="sm" variant="ghost" onClick={() => setReader(false)}>
             <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Back
           </Button>
         </div>
-        <iframe
-          key={portalToken}
-          title="Premium study batches"
-          src={readerSrc}
-          className="min-h-0 flex-1 border-0"
-          referrerPolicy="no-referrer"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
-        />
+        {/* The top strip of the embedded page (where any address/branding would show)
+            is pulled up behind an opaque black mask, so nothing outside PW ARYA is visible. */}
+        <div className="relative min-h-0 flex-1 overflow-hidden">
+          <iframe
+            key={portalToken}
+            title="Premium study batches"
+            src={readerSrc}
+            className="absolute inset-x-0 border-0"
+            style={{ top: "-56px", height: "calc(100% + 56px)", width: "100%" }}
+            referrerPolicy="no-referrer"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+          />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[0.4rem] bg-black" />
+        </div>
       </div>
     );
   }
+
 
   return (
     <div className="flex flex-1 items-center justify-center px-5 py-10">
