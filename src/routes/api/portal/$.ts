@@ -14,17 +14,55 @@ const STRIP = new Set([
   "set-cookie2",
 ]);
 
+const PORTAL_COOKIE = "pw_portal";
+const PREFIX = "/api/portal/";
+
+function readPortalCookie(request: Request): string {
+  const raw = request.headers.get("cookie") ?? "";
+  for (const part of raw.split(";")) {
+    const [k, ...v] = part.trim().split("=");
+    if (k === PORTAL_COOKIE) return decodeURIComponent(v.join("="));
+  }
+  return "";
+}
+
+/** Rewrites every upstream address in the markup back onto our own origin. */
+function maskHtml(html: string, origin: string) {
+  const escapedOrigin = origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  let out = html
+    // https://host/path  and  //host/path  → /api/portal/path
+    .replace(new RegExp(escapedOrigin + "/?", "g"), PREFIX)
+    .replace(new RegExp("//" + escapedOrigin.replace(/^https?:\\\/\\\//, ""), "g"), PREFIX);
+
+  const baseTag = `<base href="${PREFIX}">`;
+  if (/<head[^>]*>/i.test(out)) out = out.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
+  else out = baseTag + out;
+
+  // Keep every in-page navigation inside our frame and strip frame-busting.
+  out += `<script>(function(){try{
+    var A=HTMLAnchorElement.prototype;
+    document.addEventListener('click',function(e){
+      var a=e.target&&e.target.closest?e.target.closest('a'):null;
+      if(a&&a.target&&a.target!=='_self'){a.target='_self';}
+    },true);
+    Object.defineProperty(window,'top',{get:function(){return window}});
+  }catch(_){}})();</script>`;
+  return out;
+}
 
 /**
  * Masked reader: streams the members-only content through our own origin so the
- * upstream address is never shown in the address bar.
+ * upstream address is never shown in the address bar. Sub-requests (assets, page
+ * links, XHR) come back through this same route via the rewritten <base> tag and
+ * a short-lived HttpOnly cookie, so nothing ever hits the upstream host directly.
  */
 export const Route = createFileRoute("/api/portal/$")({
   server: {
     handlers: {
       GET: async ({ request, params }) => {
         const url = new URL(request.url);
-        const token = url.searchParams.get("t") ?? "";
+        const queryToken = url.searchParams.get("t") ?? "";
+        const token = queryToken || readPortalCookie(request);
         if (!verifyPortalToken(token)) {
           return new Response("Access expired. Please reload your dashboard.", {
             status: 401,
@@ -83,8 +121,6 @@ export const Route = createFileRoute("/api/portal/$")({
           // Deliberately NOT forwarding the visitor's Cookie header: it would send
           // our own site cookies (including the admin session) to a third-party host.
 
-
-
           upstream = await fetch(target.toString(), { headers: fwd, redirect: "follow" });
         } catch {
           return new Response("Content is temporarily unreachable.", { status: 502 });
@@ -95,12 +131,20 @@ export const Route = createFileRoute("/api/portal/$")({
           if (!STRIP.has(key.toLowerCase())) headers.set(key, value);
         });
         headers.set("cache-control", "no-store");
+        if (queryToken) {
+          headers.append(
+            "set-cookie",
+            `${PORTAL_COOKIE}=${encodeURIComponent(queryToken)}; Path=${PREFIX}; Max-Age=21600; HttpOnly; Secure; SameSite=Lax`,
+          );
+        }
 
         const type = upstream.headers.get("content-type") ?? "";
         if (type.includes("text/html")) {
-          let html = await upstream.text();
+          const html = await upstream.text();
 
-          // Upstream bot-protection challenge: tell the client to launch directly.
+          // Upstream bot-protection challenge: we must NOT hand the address to the
+          // browser (that would reveal the link and get refused in a frame). Instead
+          // we show our own branded retry screen that re-requests through the proxy.
           const challenged =
             upstream.headers.has("cf-mitigated") ||
             ((upstream.status === 403 || upstream.status === 503) &&
@@ -108,23 +152,15 @@ export const Route = createFileRoute("/api/portal/$")({
                 html,
               ));
           if (challenged) {
-            // The upstream host is challenging our server-side fetch. Hand the load
-            // to the member's own browser inside this same frame: the visit then looks
-            // like an ordinary direct visit and the address stays hidden behind our UI.
             headers.set("x-portal-blocked", "1");
             headers.set("content-type", "text/html; charset=utf-8");
-            const escaped = target.toString().replace(/"/g, "&quot;");
             return new Response(
-              `<!doctype html><meta charset="utf-8"><title>PW ARYA · Study</title><body style="margin:0;background:#0b1020;color:#e8ecf7;font-family:system-ui"><div id="w" style="display:flex;align-items:center;justify-content:center;height:100vh;text-align:center"><p>Preparing your batches…</p></div><script>setTimeout(function(){location.replace("${escaped}")},250)</script></body>`,
+              `<!doctype html><meta charset="utf-8"><title>PW ARYA · Study</title><body style="margin:0;background:#0b1020;color:#e8ecf7;font-family:system-ui"><div style="display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;height:100vh;text-align:center"><p style="opacity:.85">Preparing your batches…</p><p style="font-size:12px;opacity:.6">Secure check in progress, retrying automatically.</p></div><script>setTimeout(function(){location.reload()},2500)</script></body>`,
               { status: 200, headers },
             );
           }
 
-
-          const baseTag = `<base href="${baseUrl.origin}/">`;
-          html = html.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
-          if (!html.includes("<base")) html = baseTag + html;
-          return new Response(html, { status: upstream.status, headers });
+          return new Response(maskHtml(html, baseUrl.origin), { status: upstream.status, headers });
         }
 
         return new Response(upstream.body, { status: upstream.status, headers });
