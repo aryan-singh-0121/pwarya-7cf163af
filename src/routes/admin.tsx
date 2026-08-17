@@ -806,12 +806,26 @@ function SettingsPanel({
 
   return (
     <form onSubmit={save} className="glow-card space-y-4 rounded-2xl p-5">
+      {showQr ? (
+        <QrPreviewModal upiId={form.upi_id} plans={plans} onClose={() => setShowQr(false)} />
+      ) : null}
       <h2 className="font-display text-2xl tracking-wide">Live site settings</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <Label>UPI ID</Label>
           <Input value={form.upi_id} onChange={(e) => setForm({ ...form, upi_id: e.target.value })} />
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="mt-2"
+            disabled={!form.upi_id || plans.length === 0}
+            onClick={() => setShowQr(true)}
+          >
+            Preview QR for a plan
+          </Button>
         </div>
+
         <div>
           <Label>Telegram support link</Label>
           <Input
