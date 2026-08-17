@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   adminAssetUploadUrl,
   adminCreateUser,
+  adminDeleteFeedback,
   adminDeletePaymentRequest,
 
   adminDeleteUser,
@@ -21,9 +22,12 @@ import {
   adminResolveAlert,
   adminSavePlan,
   adminSaveSettings,
+  adminSendNotification,
   adminSetUserStatus,
   decidePayment,
 } from "@/lib/admin.functions";
+import { buildUpiLink } from "@/lib/upi";
+
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -188,9 +192,10 @@ function Console({ onLogout }: { onLogout: () => void }) {
         ) : tab === "Audit log" ? (
           <AuditLog rows={d.audit} />
         ) : tab === "Feedback" ? (
-          <Feedback items={d.feedback} />
+          <Feedback items={d.feedback} refresh={() => data.refetch()} />
         ) : tab === "Settings" ? (
-          <SettingsPanel settings={d.settings} refresh={() => data.refetch()} />
+          <SettingsPanel settings={d.settings} plans={d.plans} refresh={() => data.refetch()} />
+
         ) : (
           <Pricing plans={d.plans} refresh={() => data.refetch()} />
         )}
@@ -528,6 +533,24 @@ function Members({
                 <div className="flex flex-wrap gap-2">
                   <Button
                     size="sm"
+                    onClick={async () => {
+                      const body = window.prompt(`Notification message for ${u.email}`);
+                      if (!body || body.trim().length < 2) return;
+                      const res = await adminSendNotification({
+                        data: { userId: u.id, title: "PW ARYA", body: body.trim() },
+                      });
+                      if (!res.ok) {
+                        toast.error(res.error);
+                        return;
+                      }
+                      toast.success("Notification sent");
+                    }}
+                  >
+                    Notify
+                  </Button>
+
+                  <Button
+                    size="sm"
                     variant="secondary"
                     onClick={async () => {
                       await adminResetDevice({ data: { userId: u.id } });
@@ -620,7 +643,7 @@ function Security({ alerts, refresh }: { alerts: any[]; refresh: () => void }) {
   );
 }
 
-function Feedback({ items }: { items: any[] }) {
+function Feedback({ items, refresh }: { items: any[]; refresh: () => void }) {
   return (
     <div className="space-y-4">
       <h2 className="font-display text-2xl tracking-wide">Feedback &amp; reports</h2>
@@ -632,13 +655,105 @@ function Feedback({ items }: { items: any[] }) {
           <p className="mt-1 text-xs text-muted-foreground">
             {new Date(f.created_at).toLocaleString()}
           </p>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="mt-2 text-destructive"
+            onClick={async () => {
+              if (!confirm("Delete this feedback entry?")) return;
+              await adminDeleteFeedback({ data: { id: f.id } });
+              toast.success("Feedback deleted");
+              refresh();
+            }}
+          >
+            Delete
+          </Button>
         </div>
       ))}
     </div>
   );
 }
 
-function SettingsPanel({ settings, refresh }: { settings: any; refresh: () => void }) {
+/** Live QR preview for the saved UPI ID and a chosen plan amount. */
+function QrPreviewModal({
+  upiId,
+  plans,
+  onClose,
+}: {
+  upiId: string;
+  plans: any[];
+  onClose: () => void;
+}) {
+  const [planCode, setPlanCode] = useState(plans[0]?.code ?? "");
+  const [qr, setQr] = useState<string | null>(null);
+  const plan = plans.find((p) => p.code === planCode);
+  const link = buildUpiLink({
+    upiId,
+    amount: plan?.price_inr,
+    note: `PW ARYA ${plan?.name ?? ""}`.trim(),
+  });
+
+  useEffect(() => {
+    let alive = true;
+    if (!link) {
+      setQr(null);
+      return () => {
+        alive = false;
+      };
+    }
+    import("qrcode").then((QR) =>
+      QR.toDataURL(link, { width: 320, margin: 1, color: { dark: "#0b1020", light: "#ffffff" } }).then(
+        (url) => {
+          if (alive) setQr(url);
+        },
+      ),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [link]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-5">
+      <div className="glow-card w-full max-w-sm space-y-4 rounded-2xl bg-card p-6 text-center">
+        <h3 className="font-display text-2xl tracking-wide">QR preview</h3>
+        <p className="text-xs text-muted-foreground">{upiId || "Set a UPI ID first"}</p>
+        <select
+          value={planCode}
+          onChange={(e) => setPlanCode(e.target.value)}
+          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+        >
+          {plans.map((p) => (
+            <option key={p.code} value={p.code}>
+              {p.name} — ₹{p.price_inr}
+            </option>
+          ))}
+        </select>
+        {qr ? (
+          <img src={qr} alt={`UPI QR for ₹${plan?.price_inr}`} className="mx-auto rounded-xl" />
+        ) : (
+          <p className="text-sm text-muted-foreground">Enter a UPI ID to generate the QR.</p>
+        )}
+        <p className="font-display text-3xl gold-text">₹{plan?.price_inr ?? 0}</p>
+        <Button className="w-full" variant="secondary" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SettingsPanel({
+  settings,
+  plans,
+  refresh,
+}: {
+  settings: any;
+  plans: any[];
+  refresh: () => void;
+}) {
+  const [showQr, setShowQr] = useState(false);
+
   const [form, setForm] = useState({
     upi_id: "",
     qr_path: "",
@@ -709,12 +824,26 @@ function SettingsPanel({ settings, refresh }: { settings: any; refresh: () => vo
 
   return (
     <form onSubmit={save} className="glow-card space-y-4 rounded-2xl p-5">
+      {showQr ? (
+        <QrPreviewModal upiId={form.upi_id} plans={plans} onClose={() => setShowQr(false)} />
+      ) : null}
       <h2 className="font-display text-2xl tracking-wide">Live site settings</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <Label>UPI ID</Label>
           <Input value={form.upi_id} onChange={(e) => setForm({ ...form, upi_id: e.target.value })} />
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="mt-2"
+            disabled={!form.upi_id || plans.length === 0}
+            onClick={() => setShowQr(true)}
+          >
+            Preview QR for a plan
+          </Button>
         </div>
+
         <div>
           <Label>Telegram support link</Label>
           <Input

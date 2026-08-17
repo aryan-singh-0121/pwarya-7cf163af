@@ -1,11 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Clock, CheckCircle2, XCircle, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trackUtr } from "@/lib/public.functions";
+
 
 export const Route = createFileRoute("/track")({
   head: () => ({
@@ -36,9 +37,11 @@ function fmt(v: string | null | undefined) {
 }
 
 function TrackPage() {
+  const navigate = useNavigate();
   const [utr, setUtr] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+  const utrRef = useRef("");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,6 +50,7 @@ function TrackPage() {
       return;
     }
     setBusy(true);
+    utrRef.current = utr;
     try {
       setResult(await trackUtr({ data: { utr } }));
     } finally {
@@ -55,6 +59,25 @@ function TrackPage() {
   }
 
   const status = result?.found ? result.status : null;
+
+  // While a payment is under review we keep checking quietly; the moment the
+  // admin approves it the buyer is taken straight to their member area.
+  useEffect(() => {
+    if (!result?.found || status !== "pending") return;
+    const id = setInterval(async () => {
+      const next = await trackUtr({ data: { utr: utrRef.current } });
+      setResult(next);
+    }, 8000);
+    return () => clearInterval(id);
+  }, [result, status]);
+
+  useEffect(() => {
+    if (status !== "approved") return;
+    toast.success("Payment approved — opening your member area");
+    const id = setTimeout(() => navigate({ to: "/login" }), 1500);
+    return () => clearTimeout(id);
+  }, [status, navigate]);
+
 
   return (
     <div className="hero-surface min-h-screen px-5 py-12">
