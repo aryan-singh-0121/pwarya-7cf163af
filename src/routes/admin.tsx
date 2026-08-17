@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   adminAssetUploadUrl,
   adminCreateUser,
+  adminDeleteFeedback,
   adminDeletePaymentRequest,
 
   adminDeleteUser,
@@ -21,9 +22,12 @@ import {
   adminResolveAlert,
   adminSavePlan,
   adminSaveSettings,
+  adminSendNotification,
   adminSetUserStatus,
   decidePayment,
 } from "@/lib/admin.functions";
+import { buildUpiLink } from "@/lib/upi";
+
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -188,9 +192,10 @@ function Console({ onLogout }: { onLogout: () => void }) {
         ) : tab === "Audit log" ? (
           <AuditLog rows={d.audit} />
         ) : tab === "Feedback" ? (
-          <Feedback items={d.feedback} />
+          <Feedback items={d.feedback} refresh={() => data.refetch()} />
         ) : tab === "Settings" ? (
-          <SettingsPanel settings={d.settings} refresh={() => data.refetch()} />
+          <SettingsPanel settings={d.settings} plans={d.plans} refresh={() => data.refetch()} />
+
         ) : (
           <Pricing plans={d.plans} refresh={() => data.refetch()} />
         )}
