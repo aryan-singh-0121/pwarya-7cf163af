@@ -533,6 +533,24 @@ function Members({
                 <div className="flex flex-wrap gap-2">
                   <Button
                     size="sm"
+                    onClick={async () => {
+                      const body = window.prompt(`Notification message for ${u.email}`);
+                      if (!body || body.trim().length < 2) return;
+                      const res = await adminSendNotification({
+                        data: { userId: u.id, title: "PW ARYA", body: body.trim() },
+                      });
+                      if (!res.ok) {
+                        toast.error(res.error);
+                        return;
+                      }
+                      toast.success("Notification sent");
+                    }}
+                  >
+                    Notify
+                  </Button>
+
+                  <Button
+                    size="sm"
                     variant="secondary"
                     onClick={async () => {
                       await adminResetDevice({ data: { userId: u.id } });
