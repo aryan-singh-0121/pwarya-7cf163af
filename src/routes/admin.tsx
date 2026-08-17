@@ -625,7 +625,7 @@ function Security({ alerts, refresh }: { alerts: any[]; refresh: () => void }) {
   );
 }
 
-function Feedback({ items }: { items: any[] }) {
+function Feedback({ items, refresh }: { items: any[]; refresh: () => void }) {
   return (
     <div className="space-y-4">
       <h2 className="font-display text-2xl tracking-wide">Feedback &amp; reports</h2>
@@ -637,13 +637,105 @@ function Feedback({ items }: { items: any[] }) {
           <p className="mt-1 text-xs text-muted-foreground">
             {new Date(f.created_at).toLocaleString()}
           </p>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="mt-2 text-destructive"
+            onClick={async () => {
+              if (!confirm("Delete this feedback entry?")) return;
+              await adminDeleteFeedback({ data: { id: f.id } });
+              toast.success("Feedback deleted");
+              refresh();
+            }}
+          >
+            Delete
+          </Button>
         </div>
       ))}
     </div>
   );
 }
 
-function SettingsPanel({ settings, refresh }: { settings: any; refresh: () => void }) {
+/** Live QR preview for the saved UPI ID and a chosen plan amount. */
+function QrPreviewModal({
+  upiId,
+  plans,
+  onClose,
+}: {
+  upiId: string;
+  plans: any[];
+  onClose: () => void;
+}) {
+  const [planCode, setPlanCode] = useState(plans[0]?.code ?? "");
+  const [qr, setQr] = useState<string | null>(null);
+  const plan = plans.find((p) => p.code === planCode);
+  const link = buildUpiLink({
+    upiId,
+    amount: plan?.price_inr,
+    note: `PW ARYA ${plan?.name ?? ""}`.trim(),
+  });
+
+  useEffect(() => {
+    let alive = true;
+    if (!link) {
+      setQr(null);
+      return () => {
+        alive = false;
+      };
+    }
+    import("qrcode").then((QR) =>
+      QR.toDataURL(link, { width: 320, margin: 1, color: { dark: "#0b1020", light: "#ffffff" } }).then(
+        (url) => {
+          if (alive) setQr(url);
+        },
+      ),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [link]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-5">
+      <div className="glow-card w-full max-w-sm space-y-4 rounded-2xl bg-card p-6 text-center">
+        <h3 className="font-display text-2xl tracking-wide">QR preview</h3>
+        <p className="text-xs text-muted-foreground">{upiId || "Set a UPI ID first"}</p>
+        <select
+          value={planCode}
+          onChange={(e) => setPlanCode(e.target.value)}
+          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+        >
+          {plans.map((p) => (
+            <option key={p.code} value={p.code}>
+              {p.name} — ₹{p.price_inr}
+            </option>
+          ))}
+        </select>
+        {qr ? (
+          <img src={qr} alt={`UPI QR for ₹${plan?.price_inr}`} className="mx-auto rounded-xl" />
+        ) : (
+          <p className="text-sm text-muted-foreground">Enter a UPI ID to generate the QR.</p>
+        )}
+        <p className="font-display text-3xl gold-text">₹{plan?.price_inr ?? 0}</p>
+        <Button className="w-full" variant="secondary" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SettingsPanel({
+  settings,
+  plans,
+  refresh,
+}: {
+  settings: any;
+  plans: any[];
+  refresh: () => void;
+}) {
+  const [showQr, setShowQr] = useState(false);
+
   const [form, setForm] = useState({
     upi_id: "",
     qr_path: "",
