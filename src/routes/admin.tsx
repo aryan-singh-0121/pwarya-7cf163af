@@ -636,6 +636,18 @@ function Security({ alerts, refresh }: { alerts: any[]; refresh: () => void }) {
             >
               Resolve
             </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={async () => {
+                if (!confirm("Delete this security alert permanently?")) return;
+                await adminDeleteAlert({ data: { id: a.id } });
+                toast.success("Alert deleted");
+                refresh();
+              }}
+            >
+              Delete
+            </Button>
           </div>
         </div>
       ))}
