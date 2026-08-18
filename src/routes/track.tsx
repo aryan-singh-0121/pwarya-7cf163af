@@ -73,8 +73,8 @@ function TrackPage() {
 
   useEffect(() => {
     if (status !== "approved") return;
-    toast.success("Payment approved — opening your member area");
-    const id = setTimeout(() => navigate({ to: "/login" }), 1500);
+    toast.success("Payment approved — opening your batches");
+    const id = setTimeout(() => navigate({ to: "/dashboard" }), 1200);
     return () => clearTimeout(id);
   }, [status, navigate]);
 
