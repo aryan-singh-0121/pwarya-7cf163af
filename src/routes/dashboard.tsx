@@ -206,6 +206,19 @@ function BatchLauncher({ portalToken, planCode }: { portalToken: string; planCod
   // Everything is served through our own origin, so the source address is never shown.
   const readerSrc = `/api/portal/?t=${encodeURIComponent(portalToken)}`;
 
+  // If the upstream keeps serving a bot check inside the frame, hand the page to the
+  // browser itself (that always passes the check) so the member never gets stuck.
+  useEffect(() => {
+    function onMsg(e: MessageEvent) {
+      const d = e.data as { type?: string; url?: string } | null;
+      if (!d || d.type !== "pw-portal-fallback" || !d.url) return;
+      toast.message("Opening your batches...");
+      window.location.href = d.url;
+    }
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, []);
+
   function open() {
     if (!portalToken) {
       toast.error("Access unavailable. Please refresh.");
@@ -216,6 +229,7 @@ function BatchLauncher({ portalToken, planCode }: { portalToken: string; planCod
     setReader(true);
     setTimeout(() => setOpening(false), 600);
   }
+
 
   if (reader) {
     return (
