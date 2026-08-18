@@ -496,3 +496,20 @@ export const adminSendNotification = createServerFn({ method: "POST" })
     });
     return { ok: true as const };
   });
+
+/** Permanently remove a security alert entry. */
+export const adminDeleteAlert = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const session = await requireAdmin();
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("security_alerts").delete().eq("id", data.id);
+    const { writeAudit } = await import("./audit.server");
+    await writeAudit({
+      actor: session.data.user ?? "admin",
+      action: "security_alert_deleted",
+      targetType: "security_alert",
+      targetId: data.id,
+    });
+    return { ok: true as const };
+  });
