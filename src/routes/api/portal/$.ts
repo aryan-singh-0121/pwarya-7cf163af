@@ -32,7 +32,7 @@ function maskHtml(html: string, origin: string) {
   let out = html
     // https://host/path  and  //host/path  → /api/portal/path
     .replace(new RegExp(escapedOrigin + "/?", "g"), PREFIX)
-    .replace(new RegExp("//" + escapedOrigin.replace(/^https?:\\\/\\\//, ""), "g"), PREFIX);
+    .replace(new RegExp("//" + escapedOrigin.replace(/^https?:\/\//, "") + "/?", "g"), PREFIX);
 
   const baseTag = `<base href="${PREFIX}">`;
   if (/<head[^>]*>/i.test(out)) out = out.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
