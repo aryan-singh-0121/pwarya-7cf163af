@@ -295,23 +295,19 @@ export const sendFeedback = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
-/** Direct launch target for the member's batches (only for active members). */
+/**
+ * Masked launch path for the member's batches (only for active members).
+ * Never returns the upstream content address: the reader always goes through
+ * our own /api/portal/ proxy, so the source host stays hidden from the client.
+ */
 export const getPortalTarget = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const access = await evaluateAccess(context.userId);
     if (!access.allowed) return { url: null as string | null, reason: access.reason ?? null };
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: settings } = await supabaseAdmin
-      .from("app_settings")
-      .select("content_url")
-      .eq("id", 1)
-      .maybeSingle();
-    return {
-      url: settings?.content_url || "https://pwthor.live/study/batches",
-      reason: null as string | null,
-    };
+    return { url: "/api/portal/", reason: null as string | null };
   });
+
 
 /** Notifications the admin sent to this member. */
 export const getMyNotifications = createServerFn({ method: "POST" })
