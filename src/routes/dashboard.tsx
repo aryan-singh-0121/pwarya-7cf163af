@@ -208,102 +208,99 @@ type Sub = {
 } | null;
 
 
-function BatchLauncher({ portalToken, planCode }: { portalToken: string; planCode: string }) {
-  const [reader, setReader] = useState(false);
-  const [opening, setOpening] = useState(false);
-  const [hint, setHint] = useState(true);
+function BatchLauncher({
+  portalToken,
+  open,
+  onOpenChange,
+}: {
+  portalToken: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const [attempt, setAttempt] = useState(0);
+  const [stalled, setStalled] = useState(false);
 
   // Everything is served through our own origin, so the source address is never shown.
-  const readerSrc = `/api/portal/?t=${encodeURIComponent(portalToken)}`;
+  const readerSrc = `/api/portal/?t=${encodeURIComponent(portalToken)}&r=${attempt}`;
 
-  // If the upstream keeps serving a bot check inside the frame, hand the page to the
-  // browser itself (that always passes the check) so the member never gets stuck.
+  // The upstream bot check never leaves PW ARYA: we silently retry through our own
+  // origin, and only after a few tries offer a manual retry — the address is never exposed.
   useEffect(() => {
     function onMsg(e: MessageEvent) {
-      const d = e.data as { type?: string; url?: string } | null;
-      if (!d || d.type !== "pw-portal-fallback" || !d.url) return;
-      toast.message("Opening your batches...");
-      window.location.href = d.url;
+      const d = e.data as { type?: string } | null;
+      if (!d || d.type !== "pw-portal-fallback") return;
+      setAttempt((a) => {
+        if (a >= 2) {
+          setStalled(true);
+          return a;
+        }
+        setTimeout(() => setAttempt((n) => n + 1), 1200 * (a + 1));
+        return a;
+      });
     }
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
   }, []);
 
-  function open() {
-    if (!portalToken) {
-      toast.error("Access unavailable. Please refresh.");
-      return;
-    }
-    setOpening(true);
-    setHint(false);
-    setReader(true);
-    setTimeout(() => setOpening(false), 600);
-  }
-
-
-  if (reader) {
+  if (!portalToken) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col bg-black">
-        <div className="flex items-center justify-between border-b border-black bg-black px-4 py-2 text-xs text-muted-foreground">
-          <span className="font-semibold tracking-wide text-primary">PW ARYA · Study</span>
-          <Button size="sm" variant="ghost" onClick={() => setReader(false)}>
-            <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Back
-          </Button>
-        </div>
-        {/* The top strip of the embedded page (where any address/branding would show)
-            is pulled up behind an opaque black mask, so nothing outside PW ARYA is visible. */}
-        <div className="relative min-h-0 flex-1 overflow-hidden">
-          <iframe
-            key={portalToken}
-            title="Premium study batches"
-            src={readerSrc}
-            className="absolute inset-x-0 border-0"
-            style={{ top: "-56px", height: "calc(100% + 56px)", width: "100%" }}
-            referrerPolicy="no-referrer"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
-          />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-[0.4rem] bg-black" />
-        </div>
+      <div className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
+        Access unavailable. Please refresh.
       </div>
     );
   }
 
+  if (!open) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-5 py-10">
+        <Button size="lg" onClick={() => onOpenChange(true)}>
+          <Rocket className="mr-2 h-5 w-5" /> Continue studying
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-1 items-center justify-center px-5 py-10">
-      <div className="glow-card w-full max-w-xl rounded-3xl p-8 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/15">
-          <Rocket className="h-8 w-8 text-primary" />
-        </div>
-        <h1 className="mt-5 font-display text-4xl tracking-wide">Your batches are ready</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Membership active{planCode ? ` · ${planCode.toUpperCase()} plan` : ""}. Tap below to open
-          every premium batch, lecture and note — right here inside PW ARYA.
-        </p>
+    <div className="fixed inset-0 z-50 bg-black">
+      {/* The top strip of the embedded page (where any address/branding would show)
+          is pulled up behind an opaque black mask, so nothing outside PW ARYA is visible. */}
+      <div className="relative h-full w-full overflow-hidden">
+        <iframe
+          key={readerSrc}
+          title="Premium study batches"
+          src={readerSrc}
+          className="absolute inset-x-0 border-0"
+          style={{ top: "-56px", height: "calc(100% + 56px)", width: "100%" }}
+          referrerPolicy="no-referrer"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+        />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-black" />
+        <button
+          onClick={() => onOpenChange(false)}
+          className="absolute left-3 top-3 z-50 flex items-center gap-1 rounded-full bg-black/70 px-3 py-1.5 text-xs font-semibold text-primary backdrop-blur"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> PW ARYA
+        </button>
 
-        <div className="relative mt-8">
-          <Button size="lg" className="w-full text-lg" onClick={open} disabled={opening}>
-            <Rocket className="mr-2 h-5 w-5" />
-            {opening ? "Opening..." : "Open batches"}
-          </Button>
-
-          {hint ? (
-            <div className="pointer-events-none absolute -bottom-14 left-1/2 flex -translate-x-1/2 flex-col items-center">
-              <Hand className="h-9 w-9 animate-bounce text-accent drop-shadow" />
-              <span className="mt-1 rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
-                Tap here to start
-              </span>
-            </div>
-          ) : null}
-        </div>
-
-        <p className="mt-20 text-xs text-muted-foreground">
-          Your session stays locked to this device. Logging in elsewhere signs this device out.
-        </p>
+        {stalled ? (
+          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-black px-6 text-center">
+            <p className="font-display text-2xl tracking-wide text-primary">PW ARYA</p>
+            <p className="text-sm text-muted-foreground">
+              Secure check is taking longer than usual.
+            </p>
+            <Button
+              onClick={() => {
+                setStalled(false);
+                setAttempt((a) => a + 1);
+              }}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" /> Retry
+            </Button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
-
 }
 
 function ProfilePanel({
