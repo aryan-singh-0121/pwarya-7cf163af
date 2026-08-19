@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { verifyPortalToken } from "@/lib/portal.server";
+import { clientKey, rateLimit } from "@/lib/ratelimit.server";
 
 const STRIP = new Set([
   "x-frame-options",
