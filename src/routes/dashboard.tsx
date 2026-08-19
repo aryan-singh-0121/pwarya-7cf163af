@@ -51,6 +51,7 @@ export const Route = createFileRoute("/dashboard")({
 function Dashboard() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<"study" | "alerts" | "profile">("study");
+  const [readerOpen, setReaderOpen] = useState(true);
   const [deviceId, setDeviceId] = useState("");
 
   useEffect(() => setDeviceId(getDeviceId()), []);
