@@ -15,6 +15,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as TrackRouteImport } from './routes/track'
 import { Route as ApiPortalSplatRouteImport } from './routes/api/portal/$'
+import { Route as ApiPortalOpenRouteImport } from './routes/api/portal/open'
 import { Route as ApiPublicHooksMaintenanceRouteImport } from './routes/api/public/hooks/maintenance'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +48,11 @@ const ApiPortalSplatRoute = ApiPortalSplatRouteImport.update({
   path: '/api/portal/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPortalOpenRoute = ApiPortalOpenRouteImport.update({
+  id: '/api/portal/open',
+  path: '/api/portal/open',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksMaintenanceRoute =
   ApiPublicHooksMaintenanceRouteImport.update({
     id: '/api/public/hooks/maintenance',
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/track': typeof TrackRoute
   '/api/portal/$': typeof ApiPortalSplatRoute
+  '/api/portal/open': typeof ApiPortalOpenRoute
   '/api/public/hooks/maintenance': typeof ApiPublicHooksMaintenanceRoute
 }
 export interface FileRoutesByTo {
@@ -70,6 +77,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/track': typeof TrackRoute
   '/api/portal/$': typeof ApiPortalSplatRoute
+  '/api/portal/open': typeof ApiPortalOpenRoute
   '/api/public/hooks/maintenance': typeof ApiPublicHooksMaintenanceRoute
 }
 export interface FileRoutesById {
@@ -80,6 +88,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/track': typeof TrackRoute
   '/api/portal/$': typeof ApiPortalSplatRoute
+  '/api/portal/open': typeof ApiPortalOpenRoute
   '/api/public/hooks/maintenance': typeof ApiPublicHooksMaintenanceRoute
 }
 export interface FileRouteTypes {
@@ -91,6 +100,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/track'
     | '/api/portal/$'
+    | '/api/portal/open'
     | '/api/public/hooks/maintenance'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/track'
     | '/api/portal/$'
+    | '/api/portal/open'
     | '/api/public/hooks/maintenance'
   id:
     | '__root__'
@@ -109,6 +120,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/track'
     | '/api/portal/$'
+    | '/api/portal/open'
     | '/api/public/hooks/maintenance'
   fileRoutesById: FileRoutesById
 }
@@ -119,6 +131,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   TrackRoute: typeof TrackRoute
   ApiPortalSplatRoute: typeof ApiPortalSplatRoute
+  ApiPortalOpenRoute: typeof ApiPortalOpenRoute
   ApiPublicHooksMaintenanceRoute: typeof ApiPublicHooksMaintenanceRoute
 }
 
@@ -166,6 +179,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPortalSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/portal/open': {
+      id: '/api/portal/open'
+      path: '/api/portal/open'
+      fullPath: '/api/portal/open'
+      preLoaderRoute: typeof ApiPortalOpenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/maintenance': {
       id: '/api/public/hooks/maintenance'
       path: '/api/public/hooks/maintenance'
@@ -183,6 +203,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   TrackRoute: TrackRoute,
   ApiPortalSplatRoute: ApiPortalSplatRoute,
+  ApiPortalOpenRoute: ApiPortalOpenRoute,
   ApiPublicHooksMaintenanceRoute: ApiPublicHooksMaintenanceRoute,
 }
 export const routeTree = rootRouteImport
