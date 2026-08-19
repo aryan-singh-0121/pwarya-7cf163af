@@ -9,7 +9,7 @@ import {
   RefreshCw,
   Rocket,
   BookOpen,
-  Hand,
+  
   ArrowLeft,
   Bell,
 } from "lucide-react";

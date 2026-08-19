@@ -156,9 +156,8 @@ export const Route = createFileRoute("/api/portal/$")({
             headers.set("x-portal-blocked", "1");
             headers.set("content-type", "text/html; charset=utf-8");
             const retryHref = `${PREFIX}${splat.replace(/^\/+/, "")}?pwr=${attempt + 1}`;
-            const direct = JSON.stringify(target.toString());
             return new Response(
-              `<!doctype html><meta charset="utf-8"><title>PW ARYA · Study</title><body style="margin:0;background:#0b1020;color:#e8ecf7;font-family:system-ui"><div style="display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;height:100vh;text-align:center;padding:0 24px"><p style="opacity:.85">Preparing your batches…</p><p style="font-size:12px;opacity:.6">Secure check in progress.</p></div><script>(function(){var a=${attempt},u=${direct};if(a<2){setTimeout(function(){location.href=${JSON.stringify(retryHref)}},2000);return;}try{parent.postMessage({type:'pw-portal-fallback',url:u},'*')}catch(e){}})();</script></body>`,
+              `<!doctype html><meta charset="utf-8"><title>PW ARYA · Study</title><body style="margin:0;background:#0b1020;color:#e8ecf7;font-family:system-ui"><div style="display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;height:100vh;text-align:center;padding:0 24px"><p style="opacity:.85">Preparing your batches…</p><p style="font-size:12px;opacity:.6">Secure check in progress.</p></div><script>(function(){var a=${attempt};if(a<3){setTimeout(function(){location.href=${JSON.stringify(retryHref)}},1500*(a+1));return;}try{parent.postMessage({type:'pw-portal-fallback'},'*')}catch(e){}})();</script></body>`,
               { status: 200, headers },
             );
           }
