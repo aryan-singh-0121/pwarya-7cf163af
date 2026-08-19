@@ -60,6 +60,17 @@ export const Route = createFileRoute("/api/portal/$")({
   server: {
     handlers: {
       GET: async ({ request, params }) => {
+        const limited = rateLimit(clientKey(request, "portal"), {
+          limit: 240,
+          windowMs: 60_000,
+          blockMs: 60_000,
+        });
+        if (!limited.ok) {
+          return new Response("Too many requests. Please wait a moment.", {
+            status: 429,
+            headers: { "retry-after": String(limited.retryAfter) },
+          });
+        }
         const url = new URL(request.url);
         const queryToken = url.searchParams.get("t") ?? "";
         const token = queryToken || readPortalCookie(request);
