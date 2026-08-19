@@ -85,16 +85,20 @@ function Dashboard() {
     }
   }, [s, navigate]);
 
+  const fullScreen = tab === "study" && readerOpen;
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="flex items-center justify-between border-b border-border px-4 py-3">
-        <span className="animate-blink-logo font-display text-2xl tracking-[0.18em] text-primary">
-          PWARYA
-        </span>
-        <span className="text-xs text-muted-foreground">Member area</span>
-      </header>
+      {fullScreen ? null : (
+        <header className="flex items-center justify-between border-b border-border px-4 py-3">
+          <span className="animate-blink-logo font-display text-2xl tracking-[0.18em] text-primary">
+            PWARYA
+          </span>
+          <span className="text-xs text-muted-foreground">Member area</span>
+        </header>
+      )}
 
-      <main className="flex min-h-0 flex-1 flex-col pb-20">
+      <main className={`flex min-h-0 flex-1 flex-col ${fullScreen ? "" : "pb-20"}`}>
         {state.isLoading ? (
           <div className="flex flex-1 items-center justify-center text-muted-foreground">
             Loading your member area...
@@ -112,7 +116,8 @@ function Dashboard() {
         ) : tab === "study" ? (
           <BatchLauncher
             portalToken={s.portalToken ?? ""}
-            planCode={s.subscription?.plan_code ?? ""}
+            open={readerOpen}
+            onOpenChange={setReaderOpen}
           />
         ) : tab === "alerts" ? (
           <NotificationsPanel />
@@ -126,33 +131,37 @@ function Dashboard() {
       </main>
 
       {/* Bottom navigation: Study · Notifications · Profile · Logout */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-card/95 backdrop-blur">
-        <BottomTab
-          active={tab === "study"}
-          icon={<BookOpen className="h-5 w-5" />}
-          label="Study"
-          onClick={() => setTab("study")}
-        />
-        <BottomTab
-          active={tab === "alerts"}
-          icon={<Bell className="h-5 w-5" />}
-          label="Alerts"
-          onClick={() => setTab("alerts")}
-        />
-        <BottomTab
-          active={tab === "profile"}
-          icon={<User className="h-5 w-5" />}
-          label="Profile"
-          onClick={() => setTab("profile")}
-        />
-        <BottomTab
-          active={false}
-          icon={<LogOut className="h-5 w-5" />}
-          label="Logout"
-          onClick={logout}
-        />
-      </nav>
-
+      {fullScreen ? null : (
+        <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-card/95 backdrop-blur">
+          <BottomTab
+            active={tab === "study"}
+            icon={<BookOpen className="h-5 w-5" />}
+            label="Study"
+            onClick={() => {
+              setTab("study");
+              setReaderOpen(true);
+            }}
+          />
+          <BottomTab
+            active={tab === "alerts"}
+            icon={<Bell className="h-5 w-5" />}
+            label="Alerts"
+            onClick={() => setTab("alerts")}
+          />
+          <BottomTab
+            active={tab === "profile"}
+            icon={<User className="h-5 w-5" />}
+            label="Profile"
+            onClick={() => setTab("profile")}
+          />
+          <BottomTab
+            active={false}
+            icon={<LogOut className="h-5 w-5" />}
+            label="Logout"
+            onClick={logout}
+          />
+        </nav>
+      )}
     </div>
   );
 }
