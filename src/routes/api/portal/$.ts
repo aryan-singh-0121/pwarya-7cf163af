@@ -146,6 +146,11 @@ export const Route = createFileRoute("/api/portal/$")({
           if (!STRIP.has(key.toLowerCase())) headers.set(key, value);
         });
         headers.set("cache-control", "no-store");
+        headers.set("referrer-policy", "no-referrer");
+        headers.set("x-content-type-options", "nosniff");
+        // The reader is only ever embedded by PW ARYA itself, and it must never
+        // be able to break out of the frame or reach our own document.
+        headers.set("content-security-policy", "frame-ancestors 'self'; form-action *;");
         if (queryToken) {
           headers.append(
             "set-cookie",
@@ -159,7 +164,8 @@ export const Route = createFileRoute("/api/portal/$")({
 
           // Upstream bot-protection challenge: we must NOT hand the address to the
           // browser (that would reveal the link and get refused in a frame). Instead
-          // we show our own branded retry screen that re-requests through the proxy.
+          // we show our own branded screen, retry silently a couple of times, and
+          // only then ask the parent to launch through the signed /open redirect.
           const challenged =
             upstream.headers.has("cf-mitigated") ||
             ((upstream.status === 403 || upstream.status === 503) &&
@@ -172,10 +178,11 @@ export const Route = createFileRoute("/api/portal/$")({
             headers.set("content-type", "text/html; charset=utf-8");
             const retryHref = `${PREFIX}${splat.replace(/^\/+/, "")}?pwr=${attempt + 1}`;
             return new Response(
-              `<!doctype html><meta charset="utf-8"><title>PW ARYA · Study</title><body style="margin:0;background:#0b1020;color:#e8ecf7;font-family:system-ui"><div style="display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;height:100vh;text-align:center;padding:0 24px"><p style="opacity:.85">Preparing your batches…</p><p style="font-size:12px;opacity:.6">Secure check in progress.</p></div><script>(function(){var a=${attempt};if(a<3){setTimeout(function(){location.href=${JSON.stringify(retryHref)}},1500*(a+1));return;}try{parent.postMessage({type:'pw-portal-fallback'},'*')}catch(e){}})();</script></body>`,
+              `<!doctype html><meta charset="utf-8"><title>PW ARYA · Study</title><body style="margin:0;background:#05070f;color:#e8ecf7;font-family:system-ui"><div style="display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;height:100vh;text-align:center;padding:0 24px"><p style="letter-spacing:.18em;font-weight:700;color:#7dd3fc">PW ARYA</p><p style="opacity:.85">Preparing your batches…</p></div><script>(function(){var a=${attempt};if(a<2){setTimeout(function(){location.href=${JSON.stringify(retryHref)}},900*(a+1));return;}try{parent.postMessage({type:'pw-portal-open'},'*')}catch(e){}})();</script></body>`,
               { status: 200, headers },
             );
           }
+
 
 
           return new Response(maskHtml(html, baseUrl.origin), { status: upstream.status, headers });
