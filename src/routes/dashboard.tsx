@@ -272,7 +272,7 @@ function BatchLauncher({
           className="absolute inset-x-0 border-0"
           style={{ top: "-56px", height: "calc(100% + 56px)", width: "100%" }}
           referrerPolicy="no-referrer"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+          sandbox="allow-scripts allow-forms allow-popups allow-presentation"
         />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-black" />
         <button
