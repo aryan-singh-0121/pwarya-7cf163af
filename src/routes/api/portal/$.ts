@@ -118,6 +118,9 @@ export const Route = createFileRoute("/api/portal/$")({
             "upgrade-insecure-requests": "1",
             referer: baseUrl.origin + "/",
           };
+          if ((Number(url.searchParams.get("pwr") ?? "0") || 0) > 0) {
+            fwd["sec-fetch-site"] = "same-origin";
+          }
           // Deliberately NOT forwarding the visitor's Cookie header: it would send
           // our own site cookies (including the admin session) to a third-party host.
 
