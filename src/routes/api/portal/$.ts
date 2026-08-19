@@ -137,7 +137,7 @@ export const Route = createFileRoute("/api/portal/$")({
         if (queryToken) {
           headers.append(
             "set-cookie",
-            `${PORTAL_COOKIE}=${encodeURIComponent(queryToken)}; Path=${PREFIX}; Max-Age=21600; HttpOnly; Secure; SameSite=Lax`,
+            `${PORTAL_COOKIE}=${encodeURIComponent(queryToken)}; Path=${PREFIX}; Max-Age=21600; HttpOnly; Secure; SameSite=None`,
           );
         }
 

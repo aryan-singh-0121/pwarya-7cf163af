@@ -20,12 +20,18 @@ export type Settings = {
   video_popup_url: string;
   highlights: string[];
   marquee_lines: string[];
-  content_url: string;
 };
 
+// Public-facing columns only: the upstream content address is never sent to the browser.
+const PUBLIC_SETTINGS_COLUMNS =
+  "id, upi_id, qr_path, telegram_link, support_message, services_text, demo_video_url, video_popup_enabled, video_popup_url, highlights, marquee_lines, updated_at";
 
 export async function fetchSettings(): Promise<Settings | null> {
-  const { data } = await supabase.from("app_settings").select("*").eq("id", 1).maybeSingle();
+  const { data } = await supabase
+    .from("app_settings")
+    .select(PUBLIC_SETTINGS_COLUMNS)
+    .eq("id", 1)
+    .maybeSingle();
   if (!data) return null;
   return {
     ...data,
