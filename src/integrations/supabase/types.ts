@@ -340,33 +340,6 @@ export type Database = {
         }
         Relationships: []
       }
-      reader_events: {
-        Row: {
-          created_at: string
-          detail: string | null
-          id: string
-          kind: string
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          detail?: string | null
-          id?: string
-          kind: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          detail?: string | null
-          id?: string
-          kind?: string
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       security_alerts: {
         Row: {
           created_at: string
