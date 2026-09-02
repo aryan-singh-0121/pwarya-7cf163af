@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       app_settings: {
         Row: {
+          content_headers: string
+          content_proxy_url: string
           content_url: string
           demo_video_url: string
           highlights: Json
@@ -31,6 +33,8 @@ export type Database = {
           video_popup_url: string
         }
         Insert: {
+          content_headers?: string
+          content_proxy_url?: string
           content_url?: string
           demo_video_url?: string
           highlights?: Json
@@ -46,6 +50,8 @@ export type Database = {
           video_popup_url?: string
         }
         Update: {
+          content_headers?: string
+          content_proxy_url?: string
           content_url?: string
           demo_video_url?: string
           highlights?: Json
