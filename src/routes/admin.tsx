@@ -795,6 +795,8 @@ function SettingsPanel({
       video_popup_enabled: !!settings.video_popup_enabled,
       video_popup_url: settings.video_popup_url ?? "",
       content_url: settings.content_url ?? "https://pwthor.live/study/batches",
+      content_headers: (settings as { content_headers?: string }).content_headers ?? "",
+      content_proxy_url: (settings as { content_proxy_url?: string }).content_proxy_url ?? "",
       highlights: (settings.highlights ?? []).join("\n"),
       marquee_lines: (settings.marquee_lines ?? []).join("\n"),
     });
