@@ -86,6 +86,14 @@ function Dashboard() {
     }
   }, [s, navigate]);
 
+  // A normal top-level navigation is the only reliable way to open a host that
+  // refuses iframe/proxy traffic. Keep it in the same tab so popup blockers do
+  // not interfere.
+  useEffect(() => {
+    if (!s?.allowed || tab !== "study") return;
+    window.location.replace("https://pwthor.live/study/batches");
+  }, [s?.allowed, tab]);
+
   const fullScreen = tab === "study" && readerOpen;
 
   return (
@@ -115,11 +123,9 @@ function Dashboard() {
             </Button>
           </div>
         ) : tab === "study" ? (
-          <BatchLauncher
-            portalToken={s.portalToken ?? ""}
-            open={readerOpen}
-            onOpenChange={setReaderOpen}
-          />
+          <div className="flex flex-1 items-center justify-center text-muted-foreground">
+            <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Opening your batches...
+          </div>
         ) : tab === "alerts" ? (
           <NotificationsPanel />
         ) : (
