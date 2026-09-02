@@ -73,10 +73,26 @@ export const Route = createFileRoute("/api/portal/$")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: settings } = await supabaseAdmin
           .from("app_settings")
-          .select("content_url")
+          .select("content_url, content_headers, content_proxy_url")
           .eq("id", 1)
           .maybeSingle();
         const base = settings?.content_url || "https://pwthor.live/study/batches";
+        // Optional relay (admin-configured) used when the content host blocks our
+        // datacentre address outright. Example: https://relay.example.com/?url=
+        const relay = (settings?.content_proxy_url ?? "").trim();
+        // Optional extra request headers (JSON) — used to allowlist us on the
+        // content host's firewall, e.g. {"x-pw-bypass":"secret"}.
+        let extraHeaders: Record<string, string> = {};
+        try {
+          const parsed = JSON.parse((settings?.content_headers ?? "").trim() || "{}");
+          if (parsed && typeof parsed === "object") {
+            for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+              if (typeof v === "string" && v.length < 500) extraHeaders[k.toLowerCase()] = v;
+            }
+          }
+        } catch {
+          extraHeaders = {};
+        }
         const baseUrl = new URL(base);
 
         const splat = (params as { _splat?: string })._splat ?? "";
