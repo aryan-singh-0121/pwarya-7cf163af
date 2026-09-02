@@ -901,6 +901,31 @@ function SettingsPanel({
             onChange={(e) => setForm({ ...form, content_url: e.target.value })}
           />
         </div>
+        <div className="sm:col-span-2">
+          <Label>Content firewall bypass headers (JSON)</Label>
+          <Input
+            placeholder='{"x-pw-bypass":"your-secret"}'
+            value={form.content_headers}
+            onChange={(e) => setForm({ ...form, content_headers: e.target.value })}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Add a Cloudflare “Skip / Allow” rule on the content site that matches this header, so
+            our server is never challenged.
+          </p>
+        </div>
+        <div className="sm:col-span-2">
+          <Label>Relay address (optional fallback)</Label>
+          <Input
+            placeholder="https://relay.example.com/?url="
+            value={form.content_proxy_url}
+            onChange={(e) => setForm({ ...form, content_proxy_url: e.target.value })}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Used only if the content host blocks our server. Supports {"{url}"} placeholder or a
+            trailing “=”.
+          </p>
+        </div>
+
 
       </div>
       <div>
