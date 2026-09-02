@@ -10,12 +10,14 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
       app_settings: {
         Row: {
+          content_headers: string
+          content_proxy_url: string
           content_url: string
           demo_video_url: string
           highlights: Json
@@ -31,6 +33,8 @@ export type Database = {
           video_popup_url: string
         }
         Insert: {
+          content_headers?: string
+          content_proxy_url?: string
           content_url?: string
           demo_video_url?: string
           highlights?: Json
@@ -46,6 +50,8 @@ export type Database = {
           video_popup_url?: string
         }
         Update: {
+          content_headers?: string
+          content_proxy_url?: string
           content_url?: string
           demo_video_url?: string
           highlights?: Json
@@ -337,6 +343,33 @@ export type Database = {
           phone?: string
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      reader_events: {
+        Row: {
+          created_at: string
+          detail: string | null
+          id: string
+          kind: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          kind: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          kind?: string
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
