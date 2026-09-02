@@ -206,12 +206,12 @@ export const Route = createFileRoute("/api/portal/$")({
           // we show our own branded retry screen that re-requests through the proxy.
           const challenged =
             upstream.headers.has("cf-mitigated") ||
-            ((upstream.status === 403 || upstream.status === 503) &&
-              /just a moment|cf-browser-verification|challenge-platform|attention required/i.test(
+            ((upstream.status === 403 || upstream.status === 429 || upstream.status === 503) &&
+              /just a moment|cf-browser-verification|challenge-platform|attention required|you have been blocked|cf-error-details/i.test(
                 html,
               ));
           if (challenged) {
-            const attempt = Number(url.searchParams.get("pwr") ?? "0") || 0;
+            const attempt = attemptNo;
             headers.set("x-portal-blocked", "1");
             headers.set("content-type", "text/html; charset=utf-8");
             const retryHref = `${PREFIX}${splat.replace(/^\/+/, "")}?pwr=${attempt + 1}`;
