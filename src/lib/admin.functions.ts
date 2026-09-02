@@ -400,6 +400,8 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
         video_popup_enabled: z.boolean(),
         video_popup_url: z.string().trim().max(400),
         content_url: z.string().trim().url().max(400),
+        content_headers: z.string().trim().max(2000).optional().default(""),
+        content_proxy_url: z.string().trim().max(400).optional().default(""),
         highlights: z.array(z.string().trim().max(120)).max(12),
         marquee_lines: z.array(z.string().trim().max(120)).max(8),
       })
