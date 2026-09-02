@@ -777,6 +777,8 @@ function SettingsPanel({
     video_popup_enabled: false,
     video_popup_url: "",
     content_url: "https://pwthor.live/study/batches",
+    content_headers: "",
+    content_proxy_url: "",
     highlights: "",
     marquee_lines: "",
   });
