@@ -86,13 +86,12 @@ function Dashboard() {
     }
   }, [s, navigate]);
 
-  // A normal top-level navigation is the only reliable way to open a host that
-  // refuses iframe/proxy traffic. Keep it in the same tab so popup blockers do
-  // not interfere.
-  useEffect(() => {
-    if (!s?.allowed || tab !== "study") return;
-    window.location.replace("https://pwthor.live/study/batches");
-  }, [s?.allowed, tab]);
+  // Direct, user-initiated top-level navigation. Automatic redirects caused a
+  // redirect loop on the destination host, so the jump happens on tap only.
+  const openBatches = () => {
+    window.location.href = "https://pwthor.live/study/batches";
+  };
+
 
   const fullScreen = tab === "study" && readerOpen;
 
