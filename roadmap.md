@@ -1,5 +1,5 @@
 # Roadmap
 
-- [ ] Confirm Lovable Cloud is enabled
-- [ ] Replace the study proxy/iframe with a direct same-tab redirect
-- [ ] Verify the updated member flow
+- [x] Confirm Lovable Cloud is enabled
+- [x] Replace the study proxy/iframe with a direct same-tab redirect
+- [x] Verify the updated member flow
