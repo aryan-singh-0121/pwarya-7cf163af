@@ -122,9 +122,16 @@ function Dashboard() {
             </Button>
           </div>
         ) : tab === "study" ? (
-          <div className="flex flex-1 items-center justify-center text-muted-foreground">
-            <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Opening your batches...
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+            <h1 className="font-display text-3xl tracking-wide">Your batches are ready</h1>
+            <p className="max-w-md text-sm text-muted-foreground">
+              Membership active. Tap below to open every premium batch, lecture and note.
+            </p>
+            <Button size="lg" onClick={openBatches}>
+              Open batches
+            </Button>
           </div>
+
         ) : tab === "alerts" ? (
           <NotificationsPanel />
         ) : (
