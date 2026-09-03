@@ -86,13 +86,6 @@ function Dashboard() {
     }
   }, [s, navigate]);
 
-  // Direct, user-initiated top-level navigation. Automatic redirects caused a
-  // redirect loop on the destination host, so the jump happens on tap only.
-  const openBatches = () => {
-    window.location.href = "https://pwthor.live/study/batches";
-  };
-
-
   const fullScreen = tab === "study" && readerOpen;
 
   return (
@@ -122,15 +115,12 @@ function Dashboard() {
             </Button>
           </div>
         ) : tab === "study" ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-            <h1 className="font-display text-3xl tracking-wide">Your batches are ready</h1>
-            <p className="max-w-md text-sm text-muted-foreground">
-              Membership active. Tap below to open every premium batch, lecture and note.
-            </p>
-            <Button size="lg" onClick={openBatches}>
-              Open batches
-            </Button>
-          </div>
+          <BatchLauncher
+            portalToken={s.portalToken ?? ""}
+            open={readerOpen}
+            onOpenChange={setReaderOpen}
+          />
+
 
         ) : tab === "alerts" ? (
           <NotificationsPanel />
