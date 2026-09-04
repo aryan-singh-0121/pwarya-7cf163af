@@ -906,17 +906,13 @@ function SettingsPanel({
           />
         </div>
         <div className="sm:col-span-2">
-          <Label>Content firewall bypass headers (JSON)</Label>
-          <Input
-            placeholder='{"x-pw-bypass":"your-secret"}'
+          <CloudflareBypassPanel
             value={form.content_headers}
-            onChange={(e) => setForm({ ...form, content_headers: e.target.value })}
+            onChange={(v) => setForm((f) => ({ ...f, content_headers: v }))}
+            contentUrl={form.content_url}
           />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Add a Cloudflare “Skip / Allow” rule on the content site that matches this header, so
-            our server is never challenged.
-          </p>
         </div>
+
         <div className="sm:col-span-2">
           <Label>Relay address (optional fallback)</Label>
           <Input
