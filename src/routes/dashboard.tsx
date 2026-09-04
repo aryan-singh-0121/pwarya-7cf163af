@@ -193,18 +193,30 @@ type Sub = {
 
 
 function BatchLauncher() {
-  const openBatches = () => {
-    window.location.assign("https://pwthor.live/study/batches");
+  const [busy, setBusy] = useState(false);
+
+  const openBatches = async () => {
+    setBusy(true);
+    try {
+      // With a firewall bypass header configured, the request must leave from our
+      // server (only it can attach the secret header) — otherwise navigate directly.
+      const res = await getPortalTarget();
+      if (res.bypass && res.url) window.location.assign(res.url);
+      else window.location.assign("https://pwthor.live/study/batches");
+    } catch {
+      window.location.assign("https://pwthor.live/study/batches");
+    }
   };
 
   return (
     <div className="flex flex-1 items-center justify-center px-5 py-10">
-      <Button size="lg" onClick={openBatches}>
-        <Rocket className="mr-2 h-5 w-5" /> Open batches
+      <Button size="lg" disabled={busy} onClick={openBatches}>
+        <Rocket className="mr-2 h-5 w-5" /> {busy ? "Opening…" : "Open batches"}
       </Button>
     </div>
   );
 }
+
 
 function ProfilePanel({
   profile,
