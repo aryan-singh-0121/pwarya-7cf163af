@@ -304,8 +304,25 @@ export const getPortalTarget = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const access = await evaluateAccess(context.userId);
-    if (!access.allowed) return { url: null as string | null, reason: access.reason ?? null };
-    return { url: "/api/portal/", reason: null as string | null };
+    if (!access.allowed)
+      return { url: null as string | null, reason: access.reason ?? null, bypass: false };
+    // When the admin has configured a firewall bypass header, the members request
+    // must go through our server (only it can send that header). Otherwise the
+    // browser navigates to the content host directly.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: settings } = await supabaseAdmin
+      .from("app_settings")
+      .select("content_headers")
+      .eq("id", 1)
+      .maybeSingle();
+    let bypass = false;
+    try {
+      const parsed = JSON.parse((settings?.content_headers ?? "").trim() || "{}");
+      bypass = !!parsed && typeof parsed === "object" && Object.keys(parsed).length > 0;
+    } catch {
+      bypass = false;
+    }
+    return { url: "/api/portal/", reason: null as string | null, bypass };
   });
 
 
