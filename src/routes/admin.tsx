@@ -23,6 +23,7 @@ import {
   adminResolveAlert,
   adminSavePlan,
   adminSaveSettings,
+  adminTestBypassHeader,
   adminSendNotification,
   adminSetUserStatus,
   decidePayment,
@@ -906,17 +907,13 @@ function SettingsPanel({
           />
         </div>
         <div className="sm:col-span-2">
-          <Label>Content firewall bypass headers (JSON)</Label>
-          <Input
-            placeholder='{"x-pw-bypass":"your-secret"}'
+          <CloudflareBypassPanel
             value={form.content_headers}
-            onChange={(e) => setForm({ ...form, content_headers: e.target.value })}
+            onChange={(v) => setForm((f) => ({ ...f, content_headers: v }))}
+            contentUrl={form.content_url}
           />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Add a Cloudflare “Skip / Allow” rule on the content site that matches this header, so
-            our server is never challenged.
-          </p>
         </div>
+
         <div className="sm:col-span-2">
           <Label>Relay address (optional fallback)</Label>
           <Input
@@ -1040,6 +1037,124 @@ function PlanRow({ plan, refresh }: { plan: any; refresh: () => void }) {
       >
         Save
       </Button>
+    </div>
+  );
+}
+
+function CloudflareBypassPanel({
+  value,
+  onChange,
+  contentUrl,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  contentUrl: string;
+}) {
+  const parsed = (() => {
+    try {
+      const o = JSON.parse((value || "").trim() || "{}");
+      const [k, v] = Object.entries(o as Record<string, string>)[0] ?? [];
+      return { name: k ?? "x-pw-bypass", secret: typeof v === "string" ? v : "" };
+    } catch {
+      return { name: "x-pw-bypass", secret: "" };
+    }
+  })();
+  const [name, setName] = useState(parsed.name);
+  const [secret, setSecret] = useState(parsed.secret);
+  const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    setName(parsed.name);
+    setSecret(parsed.secret);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  function push(n: string, s: string) {
+    setName(n);
+    setSecret(s);
+    onChange(n && s ? JSON.stringify({ [n.trim().toLowerCase()]: s.trim() }) : "");
+  }
+
+  function generate() {
+    const bytes = new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    const s = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    push(name || "x-pw-bypass", s);
+    toast.success("Secret generated — press Save, then add the Cloudflare rule");
+  }
+
+  async function test() {
+    setTesting(true);
+    const res = await adminTestBypassHeader();
+    setTesting(false);
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    if (res.passed) toast.success(`Bypass working (HTTP ${res.status}) — redirect will succeed`);
+    else if (res.blocked) toast.error(`Still blocked by Cloudflare (HTTP ${res.status})`);
+    else toast.warning(`Reached host but got HTTP ${res.status}`);
+  }
+
+  let host = "your content site";
+  try {
+    host = new URL(contentUrl).hostname;
+  } catch {
+    /* keep default */
+  }
+
+  const rule = `(http.host eq "${host}" and http.request.uri.path contains "${(() => {
+    try {
+      return new URL(contentUrl).pathname;
+    } catch {
+      return "/";
+    }
+  })()}" and http.request.headers["${(name || "x-pw-bypass").toLowerCase()}"][0] eq "${secret || "YOUR-SECRET"}")`;
+
+  return (
+    <div className="rounded-xl border border-border/60 p-4">
+      <Label className="text-base">Cloudflare bypass rule</Label>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Our server sends this secret header on every members request. Create a matching Cloudflare
+        WAF “Skip / Allow” rule on {host} so the redirect is never challenged.
+      </p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label>Header name</Label>
+          <Input value={name} onChange={(e) => push(e.target.value, secret)} />
+        </div>
+        <div>
+          <Label>Header secret</Label>
+          <Input value={secret} onChange={(e) => push(name, e.target.value)} />
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant="secondary" onClick={generate}>
+          Generate secret
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={() => {
+            navigator.clipboard.writeText(rule);
+            toast.success("Rule expression copied");
+          }}
+        >
+          Copy rule expression
+        </Button>
+        <Button type="button" size="sm" variant="secondary" disabled={testing} onClick={test}>
+          {testing ? "Testing…" : "Test bypass now"}
+        </Button>
+      </div>
+      <pre className="mt-3 overflow-x-auto rounded-lg bg-muted/40 p-3 text-[11px] leading-relaxed">
+{rule}
+      </pre>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Cloudflare → Security → WAF → Custom rules → Create rule → paste the expression (Edit
+        expression) → Action: Skip → tick all remaining checks & Managed rules → Deploy. Then press
+        Save here and use “Test bypass now”.
+      </p>
     </div>
   );
 }

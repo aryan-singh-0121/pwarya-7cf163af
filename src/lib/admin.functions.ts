@@ -515,3 +515,61 @@ export const adminDeleteAlert = createServerFn({ method: "POST" })
     });
     return { ok: true as const };
   });
+
+/**
+ * Sends a live request to the members content host using the admin-configured
+ * bypass header, so the admin can confirm their Cloudflare "Skip / Allow" rule
+ * actually lets our server through before switching members over to it.
+ */
+export const adminTestBypassHeader = createServerFn({ method: "POST" }).handler(async () => {
+  await requireAdmin();
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: settings } = await supabaseAdmin
+    .from("app_settings")
+    .select("content_url, content_headers")
+    .eq("id", 1)
+    .maybeSingle();
+
+  const url = settings?.content_url || "https://pwthor.live/study/batches";
+  let extra: Record<string, string> = {};
+  try {
+    const parsed = JSON.parse((settings?.content_headers ?? "").trim() || "{}");
+    if (parsed && typeof parsed === "object") {
+      for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+        if (typeof v === "string" && v.length < 500) extra[k.toLowerCase()] = v;
+      }
+    }
+  } catch {
+    return { ok: false as const, error: "Bypass headers are not valid JSON." };
+  }
+  if (Object.keys(extra).length === 0)
+    return { ok: false as const, error: "Add a bypass header first, then save." };
+
+  try {
+    const res = await fetch(url, {
+      redirect: "follow",
+      headers: {
+        "user-agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "accept-language": "en-US,en;q=0.9",
+        ...extra,
+      },
+    });
+    const body = (await res.text()).slice(0, 4000);
+    const blocked =
+      res.headers.has("cf-mitigated") ||
+      ((res.status === 403 || res.status === 429 || res.status === 503) &&
+        /just a moment|cf-browser-verification|challenge-platform|attention required|you have been blocked/i.test(
+          body,
+        ));
+    return {
+      ok: true as const,
+      status: res.status,
+      blocked,
+      passed: res.ok && !blocked,
+    };
+  } catch {
+    return { ok: false as const, error: "Content host is unreachable right now." };
+  }
+});
