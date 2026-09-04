@@ -21,6 +21,7 @@ import {
   endDeviceSession,
   getMemberState,
   getMyNotifications,
+  getPortalTarget,
   markNotificationsRead,
   sendFeedback,
 } from "@/lib/member.functions";
