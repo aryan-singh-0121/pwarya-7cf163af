@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { TypingLoop } from "@/components/TypingLoop";
 import { SupportPopup } from "@/components/SupportPopup";
 import { VideoPopup } from "@/components/VideoPopup";
+import { InstagramPopup } from "@/components/InstagramPopup";
 
 import { fetchPlans, fetchSettings, youtubeEmbed, passwordScore } from "@/lib/site";
 import { buildUpiLink } from "@/lib/upi";
@@ -202,6 +203,12 @@ function Home() {
       <VideoPopup
         enabled={!!s?.video_popup_enabled}
         url={s?.video_popup_url || s?.demo_video_url || ""}
+      />
+
+      <InstagramPopup
+        enabled={!!s?.instagram_popup_enabled}
+        link={s?.instagram_link ?? ""}
+        message={s?.instagram_message ?? "Follow us on Instagram for updates."}
       />
 
       <SupportPopup
