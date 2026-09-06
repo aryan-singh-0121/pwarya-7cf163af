@@ -28,6 +28,8 @@ import {
   adminSetUserStatus,
   decidePayment,
 } from "@/lib/admin.functions";
+import { adminDeviceMonitor, adminResetDeviceRisk } from "@/lib/admin.functions";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { buildUpiLink } from "@/lib/upi";
 
 
@@ -51,6 +53,7 @@ const TABS = [
   "Payments",
   "Members",
   "Security",
+  "Device monitor",
   "Audit log",
   "Feedback",
   "Settings",
@@ -191,6 +194,8 @@ function Console({ onLogout }: { onLogout: () => void }) {
           />
         ) : tab === "Security" ? (
           <Security alerts={d.alerts} refresh={() => data.refetch()} />
+        ) : tab === "Device monitor" ? (
+          <DeviceMonitor users={d.users} devices={d.devices} refresh={() => data.refetch()} />
         ) : tab === "Audit log" ? (
           <AuditLog rows={d.audit} />
         ) : tab === "Feedback" ? (
@@ -250,18 +255,18 @@ function Payments({ requests, refresh }: { requests: any[]; refresh: () => void 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-2xl tracking-wide">Payment requests</h2>
         {rejected.length ? (
-          <Button
-            size="sm"
-            variant="destructive"
-            onClick={async () => {
-              if (!confirm(`Delete all ${rejected.length} rejected requests?`)) return;
+          <ConfirmButton
+            title={`Delete all ${rejected.length} rejected requests?`}
+            description="Every rejected payment record will be permanently removed."
+            confirmLabel="Yes, clear them"
+            onConfirm={async () => {
               for (const r of rejected) await adminDeletePaymentRequest({ data: { id: r.id } });
               toast.success("Rejected requests cleared");
               refresh();
             }}
           >
             Clear {rejected.length} rejected
-          </Button>
+          </ConfirmButton>
         ) : null}
       </div>
       {requests.length === 0 ? <p className="text-muted-foreground">No requests yet.</p> : null}
@@ -367,17 +372,15 @@ function Payments({ requests, refresh }: { requests: any[]; refresh: () => void 
               )
             ) : null}
 
-            <Button
-              size="sm"
+            <ConfirmButton
               variant="ghost"
               className="text-destructive"
-              onClick={() => {
-                if (!confirm(`Permanently delete this request from ${r.holder_name}?`)) return;
-                void removeRequest(r.id);
-              }}
+              title={`Delete the request from ${r.holder_name}?`}
+              description="The payment record and its screenshot will be removed permanently."
+              onConfirm={() => removeRequest(r.id)}
             >
               Delete this record
-            </Button>
+            </ConfirmButton>
 
           </div>
         </div>
@@ -551,21 +554,29 @@ function Members({
                     Notify
                   </Button>
 
-                  <Button
-                    size="sm"
+                  <ConfirmButton
                     variant="secondary"
-                    onClick={async () => {
+                    confirmLabel="Yes, reset"
+                    title="Reset the device lock?"
+                    description="The member will be able to sign in on a new device."
+                    onConfirm={async () => {
                       await adminResetDevice({ data: { userId: u.id } });
                       toast.success("Device lock reset");
                       refresh();
                     }}
                   >
                     Reset device
-                  </Button>
-                  <Button
-                    size="sm"
+                  </ConfirmButton>
+                  <ConfirmButton
                     variant="secondary"
-                    onClick={async () => {
+                    confirmLabel="Yes, continue"
+                    title={u.status === "suspended" ? "Unsuspend this member?" : "Suspend this member?"}
+                    description={
+                      u.status === "suspended"
+                        ? "Access will be switched back on."
+                        : "Access will stop immediately and the active plan is cancelled."
+                    }
+                    onConfirm={async () => {
                       await adminSetUserStatus({
                         data: {
                           userId: u.id,
@@ -577,19 +588,18 @@ function Members({
                     }}
                   >
                     {u.status === "suspended" ? "Unsuspend" : "Suspend + cancel"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={async () => {
-                      if (!confirm(`Delete ${u.email}?`)) return;
+                  </ConfirmButton>
+                  <ConfirmButton
+                    title={`Delete ${u.email}?`}
+                    description="The member's login, plan and history will be removed permanently."
+                    onConfirm={async () => {
                       await adminDeleteUser({ data: { userId: u.id } });
                       toast.success("User deleted");
                       refresh();
                     }}
                   >
                     Delete
-                  </Button>
+                  </ConfirmButton>
                 </div>
               </div>
             </div>
@@ -615,10 +625,11 @@ function Security({ alerts, refresh }: { alerts: any[]; refresh: () => void }) {
             <p className="text-xs text-muted-foreground">Status: {a.status}</p>
           </div>
           <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={async () => {
+            <ConfirmButton
+              confirmLabel="Yes, suspend"
+              title="Suspend this account?"
+              description="Access stops immediately and the active plan is cancelled."
+              onConfirm={async () => {
                 await adminSetUserStatus({
                   data: { userId: a.user_id, status: "suspended", cancelSubscription: true },
                 });
@@ -627,7 +638,7 @@ function Security({ alerts, refresh }: { alerts: any[]; refresh: () => void }) {
               }}
             >
               Suspend + cancel
-            </Button>
+            </ConfirmButton>
             <Button
               size="sm"
               variant="secondary"
@@ -638,21 +649,146 @@ function Security({ alerts, refresh }: { alerts: any[]; refresh: () => void }) {
             >
               Resolve
             </Button>
-            <Button
-              size="sm"
+            <ConfirmButton
               variant="ghost"
-              onClick={async () => {
-                if (!confirm("Delete this security alert permanently?")) return;
+              className="text-destructive"
+              title="Delete this security alert?"
+              onConfirm={async () => {
                 await adminDeleteAlert({ data: { id: a.id } });
                 toast.success("Alert deleted");
                 refresh();
               }}
             >
               Delete
-            </Button>
+            </ConfirmButton>
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function DeviceMonitor({
+  users,
+  devices,
+  refresh,
+}: {
+  users: any[];
+  devices: any[];
+  refresh: () => void;
+}) {
+  const monitor = useQuery({
+    queryKey: ["deviceMonitor"],
+    queryFn: () => adminDeviceMonitor(),
+    refetchInterval: 20000,
+  });
+
+  const watched = users
+    .filter((u) => (u.device_switch_count ?? 0) > 0)
+    .sort((a, b) => (b.device_switch_count ?? 0) - (a.device_switch_count ?? 0));
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="font-display text-2xl tracking-wide">Device monitor</h2>
+        <p className="text-sm text-muted-foreground">
+          One membership = one student. Accounts that keep switching phones show up here.
+        </p>
+      </div>
+
+      {watched.length === 0 ? (
+        <p className="text-muted-foreground">No device switching detected yet.</p>
+      ) : null}
+
+      {watched.map((u) => {
+        const risky = (u.device_switch_count ?? 0) >= 3;
+        const active = devices.filter((d) => d.user_id === u.id && d.is_active);
+        return (
+          <div key={u.id} className="glow-card space-y-3 rounded-2xl p-5 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-display text-xl tracking-wide">{u.full_name}</p>
+                <p className="text-muted-foreground">
+                  {u.email} · {u.phone}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Device changes: <b>{u.device_switch_count ?? 0}</b> · last change{" "}
+                  {fmt24(u.last_device_change_at)} · active devices {active.length}
+                </p>
+              </div>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
+                  risky ? "bg-destructive/15 text-destructive" : "bg-accent/15 text-accent"
+                }`}
+              >
+                {risky ? "high risk" : "watch"}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <ConfirmButton
+                variant="secondary"
+                confirmLabel="Yes, reset"
+                title="Reset this member's device history?"
+                description="The device change counter and risk flag go back to zero."
+                onConfirm={async () => {
+                  await adminResetDeviceRisk({ data: { userId: u.id } });
+                  toast.success("Device history cleared");
+                  refresh();
+                }}
+              >
+                Reset counter
+              </ConfirmButton>
+              <ConfirmButton
+                confirmLabel="Yes, suspend"
+                title="Suspend this account?"
+                description="Access stops immediately and the active plan is cancelled."
+                onConfirm={async () => {
+                  await adminSetUserStatus({
+                    data: { userId: u.id, status: "suspended", cancelSubscription: true },
+                  });
+                  toast.success("Account suspended");
+                  refresh();
+                }}
+              >
+                Suspend + cancel
+              </ConfirmButton>
+              <ConfirmButton
+                title={`Delete ${u.email}?`}
+                description="The member's login, plan and history will be removed permanently."
+                onConfirm={async () => {
+                  await adminDeleteUser({ data: { userId: u.id } });
+                  toast.success("User deleted");
+                  refresh();
+                }}
+              >
+                Delete account
+              </ConfirmButton>
+            </div>
+          </div>
+        );
+      })}
+
+      <h3 className="font-display text-xl tracking-wide">Recent logins by device</h3>
+      <div className="space-y-2">
+        {(monitor.data?.events ?? []).slice(0, 60).map((e: any) => (
+          <div
+            key={e.id}
+            className="glow-card flex flex-wrap items-center justify-between gap-2 rounded-xl p-3 text-xs"
+          >
+            <span className="font-semibold">{e.email}</span>
+            <span className="font-mono text-muted-foreground">{(e.device_id ?? "").slice(0, 14)}</span>
+            <span className="text-muted-foreground">{e.ip ?? "—"}</span>
+            <span
+              className={
+                e.outcome === "success" ? "text-success" : "font-semibold text-destructive"
+              }
+            >
+              {e.outcome.replace(/_/g, " ")}
+            </span>
+            <span className="text-muted-foreground">{fmt24(e.created_at)}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -669,19 +805,18 @@ function Feedback({ items, refresh }: { items: any[]; refresh: () => void }) {
           <p className="mt-1 text-xs text-muted-foreground">
             {new Date(f.created_at).toLocaleString()}
           </p>
-          <Button
-            size="sm"
+          <ConfirmButton
             variant="ghost"
             className="mt-2 text-destructive"
-            onClick={async () => {
-              if (!confirm("Delete this feedback entry?")) return;
+            title="Delete this feedback entry?"
+            onConfirm={async () => {
               await adminDeleteFeedback({ data: { id: f.id } });
               toast.success("Feedback deleted");
               refresh();
             }}
           >
             Delete
-          </Button>
+          </ConfirmButton>
         </div>
       ))}
     </div>
@@ -777,6 +912,9 @@ function SettingsPanel({
     demo_video_url: "",
     video_popup_enabled: false,
     video_popup_url: "",
+    instagram_link: "",
+    instagram_popup_enabled: false,
+    instagram_message: "Follow us on Instagram for updates and free resources.",
     content_url: "https://pwthor.live/study/batches",
     content_headers: "",
     content_proxy_url: "",
@@ -795,6 +933,10 @@ function SettingsPanel({
       demo_video_url: settings.demo_video_url ?? "",
       video_popup_enabled: !!settings.video_popup_enabled,
       video_popup_url: settings.video_popup_url ?? "",
+      instagram_link: settings.instagram_link ?? "",
+      instagram_popup_enabled: !!settings.instagram_popup_enabled,
+      instagram_message:
+        settings.instagram_message ?? "Follow us on Instagram for updates and free resources.",
       content_url: settings.content_url ?? "https://pwthor.live/study/batches",
       content_headers: (settings as { content_headers?: string }).content_headers ?? "",
       content_proxy_url: (settings as { content_proxy_url?: string }).content_proxy_url ?? "",
@@ -898,6 +1040,29 @@ function SettingsPanel({
             />
             Show video popup on the home screen
           </label>
+        </div>
+        <div>
+          <Label>Instagram link</Label>
+          <Input
+            placeholder="https://instagram.com/yourpage"
+            value={form.instagram_link}
+            onChange={(e) => setForm({ ...form, instagram_link: e.target.value })}
+          />
+          <label className="mt-2 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.instagram_popup_enabled}
+              onChange={(e) => setForm({ ...form, instagram_popup_enabled: e.target.checked })}
+            />
+            Show the Instagram follow popup on the home page
+          </label>
+        </div>
+        <div>
+          <Label>Instagram popup message</Label>
+          <Input
+            value={form.instagram_message}
+            onChange={(e) => setForm({ ...form, instagram_message: e.target.value })}
+          />
         </div>
         <div className="sm:col-span-2">
           <Label>Members content URL (hidden from users)</Label>

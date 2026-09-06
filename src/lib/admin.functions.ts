@@ -168,6 +168,12 @@ export const decidePayment = createServerFn({ method: "POST" })
           .from("payment_requests")
           .update({ user_id: profile.id })
           .eq("id", data.id);
+        await supabaseAdmin.from("notifications").insert({
+          user_id: profile.id,
+          kind: "congrats",
+          title: "Congratulations!",
+          body: `Your payment is verified and your ${plan?.name ?? req.plan_code} plan is now active. Open the Study tab and start learning today!`,
+        });
       }
     }
 
@@ -399,6 +405,9 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
         demo_video_url: z.string().trim().max(400),
         video_popup_enabled: z.boolean(),
         video_popup_url: z.string().trim().max(400),
+        instagram_link: z.string().trim().max(300),
+        instagram_popup_enabled: z.boolean(),
+        instagram_message: z.string().trim().max(300),
         content_url: z.string().trim().url().max(400),
         content_headers: z.string().trim().max(2000).optional().default(""),
         content_proxy_url: z.string().trim().max(400).optional().default(""),
@@ -572,4 +581,36 @@ export const adminTestBypassHeader = createServerFn({ method: "POST" }).handler(
   } catch {
     return { ok: false as const, error: "Content host is unreachable right now." };
   }
+});
+
+/** Clears a member's device-switch history after the admin reviews them. */
+export const adminResetDeviceRisk = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ userId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const session = await requireAdmin();
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin
+      .from("profiles")
+      .update({ device_switch_count: 0, risk_level: "normal" })
+      .eq("id", data.userId);
+    const { writeAudit } = await import("./audit.server");
+    await writeAudit({
+      actor: session.data.user ?? "admin",
+      action: "device_risk_reset",
+      targetType: "user",
+      targetId: data.userId,
+    });
+    return { ok: true as const };
+  });
+
+/** Recent device-change history for the monitoring section. */
+export const adminDeviceMonitor = createServerFn({ method: "POST" }).handler(async () => {
+  await requireAdmin();
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("login_events")
+    .select("id, email, user_id, device_id, ip, outcome, created_at")
+    .order("created_at", { ascending: false })
+    .limit(300);
+  return { events: data ?? [] };
 });

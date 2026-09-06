@@ -118,6 +118,23 @@ export const startDeviceSession = createServerFn({ method: "POST" })
         .eq("user_id", userId)
         .neq("device_id", data.deviceId);
 
+      // Count how often this account hops between phones so the admin can see
+      // shared accounts, and warn the student once it becomes risky.
+      const { data: prof } = await supabaseAdmin
+        .from("profiles")
+        .select("device_switch_count")
+        .eq("id", userId)
+        .maybeSingle();
+      const switches = (prof?.device_switch_count ?? 0) + 1;
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          device_switch_count: switches,
+          last_device_change_at: new Date().toISOString(),
+          risk_level: switches >= 3 ? "high" : "normal",
+        })
+        .eq("id", userId);
+
       const { writeAudit } = await import("./audit.server");
       await writeAudit({
         action: "device_lock_takeover",
@@ -197,7 +214,7 @@ export const getMemberState = createServerFn({ method: "POST" })
     const access = await evaluateAccess(userId);
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("full_name, email, phone, status, created_at")
+      .select("full_name, email, phone, status, created_at, device_switch_count, risk_level")
       .eq("id", userId)
       .maybeSingle();
     const { data: sub } = await supabaseAdmin
@@ -221,6 +238,8 @@ export const getMemberState = createServerFn({ method: "POST" })
       profile,
       subscription: sub,
       portalToken,
+      deviceSwitches: profile?.device_switch_count ?? 0,
+      highRisk: (profile?.device_switch_count ?? 0) >= 3,
     };
 
   });
@@ -338,6 +357,27 @@ export const getMyNotifications = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false })
       .limit(50);
     return { items: data ?? [] };
+  });
+
+export const deleteMyNotification = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin
+      .from("notifications")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", context.userId);
+    return { ok: true as const };
+  });
+
+export const clearMyNotifications = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("notifications").delete().eq("user_id", context.userId);
+    return { ok: true as const };
   });
 
 export const markNotificationsRead = createServerFn({ method: "POST" })

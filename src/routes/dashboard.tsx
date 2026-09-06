@@ -10,6 +10,8 @@ import {
   Rocket,
   BookOpen,
   Bell,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +25,8 @@ import {
   getMyNotifications,
   getPortalTarget,
   markNotificationsRead,
+  deleteMyNotification,
+  clearMyNotifications,
   sendFeedback,
 } from "@/lib/member.functions";
 
@@ -84,8 +88,12 @@ function Dashboard() {
     }
   }, [s, navigate]);
 
+  const highRisk = !!(s && "highRisk" in s && s.highRisk);
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
+      {s && "allowed" in s && s.allowed ? <WelcomeNotifications /> : null}
+      {highRisk ? <HighRiskDialog switches={(s as { deviceSwitches?: number }).deviceSwitches ?? 3} /> : null}
       <header className="flex items-center justify-between border-b border-border px-4 py-3">
         <span className="animate-blink-logo font-display text-2xl tracking-[0.18em] text-primary">
           PWARYA
@@ -360,15 +368,35 @@ function NotificationsPanel() {
     if (list.data?.items?.length) void markNotificationsRead();
   }, [list.data]);
 
+  async function removeOne(id: string) {
+    await deleteMyNotification({ data: { id } });
+    toast.success("Notification deleted");
+    void list.refetch();
+  }
+
   const items = list.data?.items ?? [];
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4 px-5 py-8">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-2xl tracking-wide">Notifications</h2>
-        <Button variant="ghost" size="sm" onClick={() => list.refetch()}>
-          <RefreshCw className="mr-1 h-4 w-4" /> Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={() => list.refetch()}>
+            <RefreshCw className="mr-1 h-4 w-4" /> Refresh
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive"
+            onClick={async () => {
+              await clearMyNotifications();
+              toast.success("All notifications deleted");
+              void list.refetch();
+            }}
+          >
+            <Trash2 className="mr-1 h-4 w-4" /> Clear all
+          </Button>
+        </div>
       </div>
       {list.isLoading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>
@@ -387,12 +415,109 @@ function NotificationsPanel() {
               ) : null}
             </div>
             <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{n.body}</p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {new Date(n.created_at).toLocaleString("en-GB", { hour12: false })}
-            </p>
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                {new Date(n.created_at).toLocaleString("en-GB", { hour12: false })}
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive"
+                onClick={() => removeOne(n.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           </article>
         ))
       )}
+    </div>
+  );
+}
+
+/** One-time English warning for accounts that keep hopping between phones. */
+function HighRiskDialog({ switches }: { switches: number }) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("pwarya_risk_ack") === "1") return;
+    setOpen(true);
+  }, []);
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-background/90 px-5">
+      <div className="glow-card w-full max-w-md space-y-4 rounded-2xl border border-destructive/50 p-6 text-center">
+        <AlertTriangle className="mx-auto h-10 w-10 text-destructive" />
+        <h2 className="font-display text-2xl tracking-wide text-destructive">
+          Your account is at high risk
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          This account has been opened on {switches} different devices. One membership is for one
+          student only. If device sharing continues, your account can be removed without a refund.
+        </p>
+        <Button
+          className="w-full"
+          onClick={() => {
+            sessionStorage.setItem("pwarya_risk_ack", "1");
+            setOpen(false);
+          }}
+        >
+          I understand
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** Unread notifications are shown as a popup right after login. */
+function WelcomeNotifications() {
+  const [items, setItems] = useState<{ id: string; title: string; body: string }[]>([]);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("pwarya_notif_seen") === "1") return;
+    let alive = true;
+    getMyNotifications()
+      .then((r) => {
+        if (!alive) return;
+        const unread = (r.items ?? []).filter((n) => !n.read_at).slice(0, 5);
+        if (unread.length) {
+          setItems(unread);
+          setOpen(true);
+        }
+        sessionStorage.setItem("pwarya_notif_seen", "1");
+      })
+      .catch(() => null);
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (!open || items.length === 0) return null;
+  return (
+    <div className="fixed inset-0 z-[65] flex items-center justify-center bg-background/90 px-5">
+      <div className="glow-card w-full max-w-md space-y-3 rounded-2xl p-6">
+        <div className="flex items-center gap-2">
+          <Bell className="h-5 w-5 text-primary" />
+          <h2 className="font-display text-2xl tracking-wide">New for you</h2>
+        </div>
+        {items.map((n) => (
+          <div key={n.id} className="rounded-xl border border-border/70 bg-card/40 p-3">
+            <p className="font-semibold">{n.title}</p>
+            <p className="text-sm text-muted-foreground">{n.body}</p>
+          </div>
+        ))}
+        <Button
+          className="w-full"
+          onClick={() => {
+            void markNotificationsRead();
+            setOpen(false);
+          }}
+        >
+          Got it
+        </Button>
+      </div>
     </div>
   );
 }
