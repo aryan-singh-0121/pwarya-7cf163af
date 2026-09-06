@@ -22,6 +22,9 @@ export type Database = {
           demo_video_url: string
           highlights: Json
           id: number
+          instagram_link: string
+          instagram_message: string
+          instagram_popup_enabled: boolean
           marquee_lines: Json
           qr_path: string
           services_text: string
@@ -39,6 +42,9 @@ export type Database = {
           demo_video_url?: string
           highlights?: Json
           id?: number
+          instagram_link?: string
+          instagram_message?: string
+          instagram_popup_enabled?: boolean
           marquee_lines?: Json
           qr_path?: string
           services_text?: string
@@ -56,6 +62,9 @@ export type Database = {
           demo_video_url?: string
           highlights?: Json
           id?: number
+          instagram_link?: string
+          instagram_message?: string
+          instagram_popup_enabled?: boolean
           marquee_lines?: Json
           qr_path?: string
           services_text?: string
@@ -199,6 +208,7 @@ export type Database = {
           body: string
           created_at: string
           id: string
+          kind: string
           read_at: string | null
           title: string
           user_id: string
@@ -207,6 +217,7 @@ export type Database = {
           body: string
           created_at?: string
           id?: string
+          kind?: string
           read_at?: string | null
           title?: string
           user_id: string
@@ -215,6 +226,7 @@ export type Database = {
           body?: string
           created_at?: string
           id?: string
+          kind?: string
           read_at?: string | null
           title?: string
           user_id?: string
@@ -319,28 +331,40 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          device_switch_count: number
           email: string
           full_name: string
           id: string
+          last_device_change_at: string | null
+          last_motivation_at: string | null
           phone: string
+          risk_level: string
           status: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          device_switch_count?: number
           email: string
           full_name?: string
           id: string
+          last_device_change_at?: string | null
+          last_motivation_at?: string | null
           phone?: string
+          risk_level?: string
           status?: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          device_switch_count?: number
           email?: string
           full_name?: string
           id?: string
+          last_device_change_at?: string | null
+          last_motivation_at?: string | null
           phone?: string
+          risk_level?: string
           status?: string
           updated_at?: string
         }
