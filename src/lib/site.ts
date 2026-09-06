@@ -18,13 +18,16 @@ export type Settings = {
   demo_video_url: string;
   video_popup_enabled: boolean;
   video_popup_url: string;
+  instagram_link: string;
+  instagram_popup_enabled: boolean;
+  instagram_message: string;
   highlights: string[];
   marquee_lines: string[];
 };
 
 // Public-facing columns only: the upstream content address is never sent to the browser.
 const PUBLIC_SETTINGS_COLUMNS =
-  "id, upi_id, qr_path, telegram_link, support_message, services_text, demo_video_url, video_popup_enabled, video_popup_url, highlights, marquee_lines, updated_at";
+  "id, upi_id, qr_path, telegram_link, support_message, services_text, demo_video_url, video_popup_enabled, video_popup_url, instagram_link, instagram_popup_enabled, instagram_message, highlights, marquee_lines, updated_at";
 
 export async function fetchSettings(): Promise<Settings | null> {
   const { data } = await supabase
