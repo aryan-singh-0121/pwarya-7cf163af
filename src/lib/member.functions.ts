@@ -118,6 +118,23 @@ export const startDeviceSession = createServerFn({ method: "POST" })
         .eq("user_id", userId)
         .neq("device_id", data.deviceId);
 
+      // Count how often this account hops between phones so the admin can see
+      // shared accounts, and warn the student once it becomes risky.
+      const { data: prof } = await supabaseAdmin
+        .from("profiles")
+        .select("device_switch_count")
+        .eq("id", userId)
+        .maybeSingle();
+      const switches = (prof?.device_switch_count ?? 0) + 1;
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          device_switch_count: switches,
+          last_device_change_at: new Date().toISOString(),
+          risk_level: switches >= 3 ? "high" : "normal",
+        })
+        .eq("id", userId);
+
       const { writeAudit } = await import("./audit.server");
       await writeAudit({
         action: "device_lock_takeover",
