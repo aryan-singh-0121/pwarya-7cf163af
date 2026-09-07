@@ -547,7 +547,7 @@ export const adminTestBypassHeader = createServerFn({ method: "POST" }).handler(
   await requireAdmin();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: settings } = await supabaseAdmin
-    .from("app_settings")
+    .from("app_content_config")
     .select("content_url, content_headers")
     .eq("id", 1)
     .maybeSingle();
