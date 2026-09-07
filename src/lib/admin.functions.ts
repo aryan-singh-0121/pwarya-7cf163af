@@ -69,6 +69,14 @@ export const adminOverview = createServerFn({ method: "POST" }).handler(async ()
     supabaseAdmin.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(300),
   ]);
 
+  // Content host settings live in a backend-only table so they are never
+  // reachable through the public Data API.
+  const { data: contentConfig } = await supabaseAdmin
+    .from("app_content_config")
+    .select("content_url, content_headers, content_proxy_url")
+    .eq("id", 1)
+    .maybeSingle();
+
   const withProof = await Promise.all(
     (requests.data ?? []).map(async (r) => {
       let proofUrl: string | null = null;
