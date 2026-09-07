@@ -96,7 +96,7 @@ export const adminOverview = createServerFn({ method: "POST" }).handler(async ()
     subscriptions: subs.data ?? [],
     alerts: alerts.data ?? [],
     feedback: fb.data ?? [],
-    settings: settings.data ?? null,
+    settings: settings.data ? { ...settings.data, ...(contentConfig ?? {}) } : null,
     plans: plans.data ?? [],
     devices: devices.data ?? [],
     audit: audit.data ?? [],
