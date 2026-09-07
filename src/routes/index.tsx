@@ -295,8 +295,8 @@ function PaymentSection({
       toast.error("Phone number must be 10 digits");
       return;
     }
-    if (strength.score < 4) {
-      toast.error("Please choose a stronger password");
+    if (form.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
       return;
     }
     if (!/^[0-9]{12}$/.test(form.utr)) {
@@ -471,18 +471,8 @@ function PaymentSection({
                   value={form.password}
                   onChange={(e) => set("password", e.target.value)}
                 />
-                <div className="mt-2 flex gap-1">
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <span
-                      key={i}
-                      className={`h-1.5 flex-1 rounded-full ${
-                        i < strength.score ? "bg-primary" : "bg-muted"
-                      }`}
-                    />
-                  ))}
-                </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {strength.label} — 8+ chars, upper, lower, number, symbol.
+                  Use at least 6 characters.
                 </p>
               </div>
             </div>
