@@ -20,7 +20,7 @@ import { SupportPopup } from "@/components/SupportPopup";
 import { VideoPopup } from "@/components/VideoPopup";
 import { InstagramPopup } from "@/components/InstagramPopup";
 
-import { fetchPlans, fetchSettings, youtubeEmbed, passwordScore } from "@/lib/site";
+import { fetchPlans, fetchSettings, youtubeEmbed } from "@/lib/site";
 import { buildUpiLink } from "@/lib/upi";
 import {
   createProofUploadUrl,
@@ -258,7 +258,6 @@ function PaymentSection({
     ...(plan ? { amount: plan.price_inr } : {}),
     note: plan ? `PW ARYA ${plan.name}` : "PW ARYA membership",
   });
-  const strength = passwordScore(form.password);
 
   // The QR is generated live from the admin's UPI ID + the selected plan amount.
   useEffect(() => {
@@ -295,8 +294,8 @@ function PaymentSection({
       toast.error("Phone number must be 10 digits");
       return;
     }
-    if (strength.score < 4) {
-      toast.error("Please choose a stronger password");
+    if (form.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
       return;
     }
     if (!/^[0-9]{12}$/.test(form.utr)) {
@@ -471,18 +470,8 @@ function PaymentSection({
                   value={form.password}
                   onChange={(e) => set("password", e.target.value)}
                 />
-                <div className="mt-2 flex gap-1">
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <span
-                      key={i}
-                      className={`h-1.5 flex-1 rounded-full ${
-                        i < strength.score ? "bg-primary" : "bg-muted"
-                      }`}
-                    />
-                  ))}
-                </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {strength.label} — 8+ chars, upper, lower, number, symbol.
+                  Use at least 6 characters.
                 </p>
               </div>
             </div>

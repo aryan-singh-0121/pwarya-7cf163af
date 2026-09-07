@@ -23,7 +23,6 @@ import {
   endDeviceSession,
   getMemberState,
   getMyNotifications,
-  getPortalTarget,
   markNotificationsRead,
   deleteMyNotification,
   clearMyNotifications,
@@ -31,7 +30,6 @@ import {
 } from "@/lib/member.functions";
 
 import { getDeviceId } from "@/hooks/useDeviceId";
-import { passwordScore } from "@/lib/site";
 
 export const Route = createFileRoute("/dashboard")({
   ssr: false,
@@ -201,27 +199,70 @@ type Sub = {
 } | null;
 
 
+const STUDY_STEPS = [
+  {
+    title: "Tap Open batches",
+    text: "It takes you straight to your study library in the same window — no extra tabs, no links to copy.",
+  },
+  {
+    title: "Pick your batch",
+    text: "Choose the batch, then the subject and chapter you want to study today.",
+  },
+  {
+    title: "Come back anytime",
+    text: "Use your phone's back button to return here, or open the site again and sign in.",
+  },
+  {
+    title: "One account, one device",
+    text: "Signing in on another phone signs this one out. Keep your password private.",
+  },
+  {
+    title: "Need help?",
+    text: "Open the Alerts tab for messages from us, or send a report from the Profile tab.",
+  },
+];
+
 function BatchLauncher() {
   const [busy, setBusy] = useState(false);
 
-  const openBatches = async () => {
+  // Temporary: go straight to the study site. The masked reader is disabled
+  // until the content host's firewall allows our server through.
+  const openBatches = () => {
     setBusy(true);
-    try {
-      // With a firewall bypass header configured, the request must leave from our
-      // server (only it can attach the secret header) — otherwise navigate directly.
-      const res = await getPortalTarget();
-      if (res.bypass && res.url) window.location.assign(res.url);
-      else window.location.assign("https://pwthor.live/study/batches");
-    } catch {
-      window.location.assign("https://pwthor.live/study/batches");
-    }
+    window.location.href = "https://pwthor.live/study/batches";
   };
 
   return (
-    <div className="flex flex-1 items-center justify-center px-5 py-10">
-      <Button size="lg" disabled={busy} onClick={openBatches}>
-        <Rocket className="mr-2 h-5 w-5" /> {busy ? "Opening…" : "Open batches"}
-      </Button>
+    <div className="mx-auto w-full max-w-3xl space-y-6 px-5 py-8">
+      <section className="glow-card rounded-2xl p-6 text-center">
+        <span className="inline-flex items-center gap-2 rounded-full bg-primary/15 px-3 py-1 text-xs font-bold uppercase tracking-widest text-primary">
+          <BookOpen className="h-3.5 w-3.5" /> Membership active
+        </span>
+        <h1 className="mt-4 font-display text-3xl tracking-wide">Your batches are ready</h1>
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+          Everything in your plan is unlocked. Tap the button below to start studying.
+        </p>
+        <Button size="lg" className="mt-5 w-full sm:w-auto" disabled={busy} onClick={openBatches}>
+          <Rocket className="mr-2 h-5 w-5" /> {busy ? "Opening…" : "Open batches"}
+        </Button>
+      </section>
+
+      <section className="glow-card rounded-2xl p-6">
+        <h2 className="font-display text-2xl tracking-wide">How to use</h2>
+        <ol className="mt-4 space-y-4">
+          {STUDY_STEPS.map((s, i) => (
+            <li key={s.title} className="flex gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary">
+                {i + 1}
+              </span>
+              <div>
+                <p className="text-sm font-semibold">{s.title}</p>
+                <p className="text-sm text-muted-foreground">{s.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
     </div>
   );
 }
@@ -240,7 +281,7 @@ function ProfilePanel({
   const [newPassword, setNew] = useState("");
   const [message, setMessage] = useState("");
   const [kind, setKind] = useState<"feedback" | "report">("feedback");
-  const strength = passwordScore(newPassword);
+  
 
   async function changePw(e: React.FormEvent) {
     e.preventDefault();
@@ -312,12 +353,13 @@ function ProfilePanel({
             id="new"
             type="password"
             required
+            minLength={6}
             value={newPassword}
             onChange={(e) => setNew(e.target.value)}
           />
-          <p className="mt-1 text-xs text-muted-foreground">Strength: {strength.label}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Use at least 6 characters.</p>
         </div>
-        <Button type="submit" disabled={strength.score < 4}>
+        <Button type="submit" disabled={newPassword.length < 6}>
           Update password
         </Button>
       </form>

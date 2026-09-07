@@ -11,12 +11,8 @@ const phoneSchema = z
   .regex(/^[0-9]{10}$/, "Phone number must be exactly 10 digits");
 const passwordSchema = z
   .string()
-  .min(8, "Password must be at least 8 characters")
-  .max(72)
-  .regex(/[A-Z]/, "Add an uppercase letter")
-  .regex(/[a-z]/, "Add a lowercase letter")
-  .regex(/[0-9]/, "Add a number")
-  .regex(/[^A-Za-z0-9]/, "Add a special character");
+  .min(6, "Password must be at least 6 characters")
+  .max(72);
 
 /** Signed URL for the QR image + demo assets stored in the private bucket. */
 export const getAssetUrl = createServerFn({ method: "POST" })
