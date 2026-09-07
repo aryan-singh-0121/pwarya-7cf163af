@@ -20,7 +20,7 @@ import { SupportPopup } from "@/components/SupportPopup";
 import { VideoPopup } from "@/components/VideoPopup";
 import { InstagramPopup } from "@/components/InstagramPopup";
 
-import { fetchPlans, fetchSettings, youtubeEmbed, passwordScore } from "@/lib/site";
+import { fetchPlans, fetchSettings, youtubeEmbed } from "@/lib/site";
 import { buildUpiLink } from "@/lib/upi";
 import {
   createProofUploadUrl,
@@ -258,7 +258,6 @@ function PaymentSection({
     ...(plan ? { amount: plan.price_inr } : {}),
     note: plan ? `PW ARYA ${plan.name}` : "PW ARYA membership",
   });
-  const strength = passwordScore(form.password);
 
   // The QR is generated live from the admin's UPI ID + the selected plan amount.
   useEffect(() => {
