@@ -23,7 +23,6 @@ import {
   endDeviceSession,
   getMemberState,
   getMyNotifications,
-  getPortalTarget,
   markNotificationsRead,
   deleteMyNotification,
   clearMyNotifications,
@@ -31,7 +30,6 @@ import {
 } from "@/lib/member.functions";
 
 import { getDeviceId } from "@/hooks/useDeviceId";
-import { passwordScore } from "@/lib/site";
 
 export const Route = createFileRoute("/dashboard")({
   ssr: false,
