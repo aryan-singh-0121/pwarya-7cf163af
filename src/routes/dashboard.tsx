@@ -281,7 +281,7 @@ function ProfilePanel({
   const [newPassword, setNew] = useState("");
   const [message, setMessage] = useState("");
   const [kind, setKind] = useState<"feedback" | "report">("feedback");
-  const strength = passwordScore(newPassword);
+  
 
   async function changePw(e: React.FormEvent) {
     e.preventDefault();
