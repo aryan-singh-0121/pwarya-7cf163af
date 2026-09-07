@@ -69,6 +69,14 @@ export const adminOverview = createServerFn({ method: "POST" }).handler(async ()
     supabaseAdmin.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(300),
   ]);
 
+  // Content host settings live in a backend-only table so they are never
+  // reachable through the public Data API.
+  const { data: contentConfig } = await supabaseAdmin
+    .from("app_content_config")
+    .select("content_url, content_headers, content_proxy_url")
+    .eq("id", 1)
+    .maybeSingle();
+
   const withProof = await Promise.all(
     (requests.data ?? []).map(async (r) => {
       let proofUrl: string | null = null;
@@ -88,7 +96,7 @@ export const adminOverview = createServerFn({ method: "POST" }).handler(async ()
     subscriptions: subs.data ?? [],
     alerts: alerts.data ?? [],
     feedback: fb.data ?? [],
-    settings: settings.data ?? null,
+    settings: settings.data ? { ...settings.data, ...(contentConfig ?? {}) } : null,
     plans: plans.data ?? [],
     devices: devices.data ?? [],
     audit: audit.data ?? [],
@@ -420,8 +428,13 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await requireAdmin();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("app_settings").update(data).eq("id", 1);
+    const { content_url, content_headers, content_proxy_url, ...publicSettings } = data;
+    const { error } = await supabaseAdmin.from("app_settings").update(publicSettings).eq("id", 1);
     if (error) return { ok: false as const, error: "Could not save settings." };
+    const { error: cfgError } = await supabaseAdmin
+      .from("app_content_config")
+      .upsert({ id: 1, content_url, content_headers, content_proxy_url, updated_at: new Date().toISOString() });
+    if (cfgError) return { ok: false as const, error: "Could not save settings." };
     return { ok: true as const };
   });
 
@@ -534,7 +547,7 @@ export const adminTestBypassHeader = createServerFn({ method: "POST" }).handler(
   await requireAdmin();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: settings } = await supabaseAdmin
-    .from("app_settings")
+    .from("app_content_config")
     .select("content_url, content_headers")
     .eq("id", 1)
     .maybeSingle();

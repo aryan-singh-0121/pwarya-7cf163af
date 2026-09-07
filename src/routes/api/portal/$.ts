@@ -72,7 +72,7 @@ export const Route = createFileRoute("/api/portal/$")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: settings } = await supabaseAdmin
-          .from("app_settings")
+          .from("app_content_config")
           .select("content_url, content_headers, content_proxy_url")
           .eq("id", 1)
           .maybeSingle();

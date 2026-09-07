@@ -14,11 +14,32 @@ export type Database = {
   }
   public: {
     Tables: {
-      app_settings: {
+      app_content_config: {
         Row: {
           content_headers: string
           content_proxy_url: string
           content_url: string
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          content_headers?: string
+          content_proxy_url?: string
+          content_url?: string
+          id?: number
+          updated_at?: string
+        }
+        Update: {
+          content_headers?: string
+          content_proxy_url?: string
+          content_url?: string
+          id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      app_settings: {
+        Row: {
           demo_video_url: string
           highlights: Json
           id: number
@@ -36,9 +57,6 @@ export type Database = {
           video_popup_url: string
         }
         Insert: {
-          content_headers?: string
-          content_proxy_url?: string
-          content_url?: string
           demo_video_url?: string
           highlights?: Json
           id?: number
@@ -56,9 +74,6 @@ export type Database = {
           video_popup_url?: string
         }
         Update: {
-          content_headers?: string
-          content_proxy_url?: string
-          content_url?: string
           demo_video_url?: string
           highlights?: Json
           id?: number

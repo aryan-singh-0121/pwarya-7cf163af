@@ -330,7 +330,7 @@ export const getPortalTarget = createServerFn({ method: "POST" })
     // browser navigates to the content host directly.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: settings } = await supabaseAdmin
-      .from("app_settings")
+      .from("app_content_config")
       .select("content_headers")
       .eq("id", 1)
       .maybeSingle();
