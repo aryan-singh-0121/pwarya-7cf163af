@@ -428,8 +428,13 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await requireAdmin();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("app_settings").update(data).eq("id", 1);
+    const { content_url, content_headers, content_proxy_url, ...publicSettings } = data;
+    const { error } = await supabaseAdmin.from("app_settings").update(publicSettings).eq("id", 1);
     if (error) return { ok: false as const, error: "Could not save settings." };
+    const { error: cfgError } = await supabaseAdmin
+      .from("app_content_config")
+      .upsert({ id: 1, content_url, content_headers, content_proxy_url, updated_at: new Date().toISOString() });
+    if (cfgError) return { ok: false as const, error: "Could not save settings." };
     return { ok: true as const };
   });
 
