@@ -61,13 +61,8 @@ export function youtubeEmbed(url: string): string | null {
   return m ? `https://www.youtube.com/embed/${m[1]}` : null;
 }
 
+/** Minimum rule only: a password just needs 6 or more characters. */
 export function passwordScore(pw: string) {
-  let score = 0;
-  if (pw.length >= 8) score++;
-  if (pw.length >= 12) score++;
-  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
-  const labels = ["Very weak", "Weak", "Fair", "Good", "Strong", "Very strong"];
-  return { score, label: labels[score] ?? "Very weak" };
+  const ok = pw.length >= 6;
+  return { score: ok ? 5 : 0, label: ok ? "Looks good" : "At least 6 characters" };
 }

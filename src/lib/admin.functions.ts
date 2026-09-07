@@ -255,7 +255,7 @@ export const adminCreateUser = createServerFn({ method: "POST" })
         fullName: z.string().trim().min(2).max(80),
         email: z.string().trim().toLowerCase().email().max(255),
         phone: z.string().trim().regex(/^[0-9]{10,15}$/),
-        password: z.string().min(8).max(72),
+        password: z.string().min(6).max(72),
         planCode: z.string().min(1).max(20),
       })
       .parse(d),
