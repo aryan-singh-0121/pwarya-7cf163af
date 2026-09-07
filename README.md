@@ -1,14 +1,18 @@
-# Welcome to your Lovable project
+# PW ARYA Access
+
+mai chata hu mera ya jo web hai isko use kern pr sucscription add kerna ( https://pwthor.live/study/batches)   ya mera web ka link hai mai chata hu user jisa he user mera new web pr jya waha user ko pay to access ka opption show ho waha mera qr show ho user pay kerk utr and screenshort share kera mai admin paneal sa user ka payment veryfy kerk approve or denay karu >  agar approve kr du to use same passward and username and phone number use kerk user       https://pwthor.live/study/batches    access ker pay   allow only 12 digit utr number + add admin panel where i can login and see user purchases request and give acces and passkey or gmail account login permission (admin panel user name Aryan Singh   passward = Singh@@1122 )  add more functions and give ma also sql code for database + after payment approval screenshort auto delete + for login also required passward + at a time only device can access 1 account + pricing (10 inr for 10 days , 99 for 3 months , 299  for 5 months , 499 for 1 year  , 599 for life time free ) admin panel sa qr and upi id upload kerna ka function add kro + admin panel sa user ko manually account create and account delete kerna ka function add kro + name pw Thor ko =. PW ARYA kro (name write and delete loop animation ma show ho  +  admin panel sa customer support k liya teligram Chanel link set kr pau jo Home Screen pr popup + cloud flare add bro for security k liya + bottom ma perofile section ho user k liya jaha user apna old password dal kr passward change ker pay and user waha apna details and apna subscription plan ka details dakh pay or waha sa report and feedback da sheka + https://pwthor.live/study/batches   pr jb redirect ho to user ko pata na chela user ya redirect na ho apna ise web ma open ho + website ma admin panel sa live time changes ho + subbmit nahi ho raha payment details(could not submitt please check your details ) fix kro +  utr only 12 digit allow + admin panel ma manualy user account add kerna ka opption ho or user ko manualy delete kerna ka opption ho + jis email id and numer sa login 1 din ma 2-3 bar alaga alag device ma ho us user ka email and id securaty alert section ma show ho jaha sa mai user ka account susspend kerk uska sucscription cancle kr shaku + user jb payment kerk subbmit kera apna screenshort and utr etc then after approvel or deney wo 10 min ma auto  delete ho jya + user correct credintial sa login kera to cloudflare sa verify kro  at a time 1 account only login in one device + correct crendintial sa user login kera to  ya website apna ise website ma open ho or user ko is website k link ka pata na chela  ( https://pwthor.live/study/batches  ) ya website apna pura website pr rent ho  or sirf 1 side kahi perofile ka section ho jaha user k account ka details ho jaha sa user apna passward changer kr sheka old passward enter kerk + securaty high kro or webiste fast load ho + admin panel ma user ka full details ho + kis user na kon sa sucription liya hai or sucription ka time end hota he user ka perofile delete kr do automaticly uska bad user bina new sucription k logi na kerk pay + (Premium learning, unlocked for members) top ma loop ma write and delete animation ma show ho +  (PWARYA ) logo blinking animation ma show ho +  admin panel sa mai teligram pr cutomer support help karu jis k liya mai cutomer support link v admin panel sa set kar pau + website k services k bera ma likh pau (admin panel sa ) + demo viedo (youtube viedo ko link k through is pr viedo play karwa pau) + is website k key point v da pau higlights words ma + customer support ka poupup home screen pr v show ho + isa securaty add kro jis sa 1 account at a time 1 he phone ma login rah pay dusra phone ma login hota he detect ho jya or admin panel ma user ka detected brhivour ma show ho + user k account jitna time k liya subscription approved ho utna time bad auto access delete ho jya + admin kise v user ka account delete kr pay + user payment k bad admin panel ma user ka summited (account holder name , utr , and screenshort ) admin panel ma show ho or admin panel sa approvel k bad admin panel ma hr account k liya Access key genrate ho jisko mai admin panel sa copy kerk user ko manualy mail karu user ka Access key+ account banena k liya user ka name , email id , phone number ,strong passward(strangth count parameter) input lo user name + access key user ka passward or koi random 2 digit ho + make a advance admin panel + add more securaty and cloudflare
 
 This project was built with [Lovable](https://lovable.dev).
 
+**Live app**: https://pwarya.lovable.app
+
 ## Build with Lovable
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/4a1ba58f-320f-4a68-9dbf-0e7489a3851d).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
@@ -20,10 +24,3 @@ cd <repository-name>
 npm i
 npm run dev
 ```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
