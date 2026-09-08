@@ -222,14 +222,21 @@ const STUDY_STEPS = [
   },
 ];
 
-function BatchLauncher() {
-  const [busy, setBusy] = useState(false);
+const BATCH_URL = "https://pwthor.live/study/batches";
 
-  // Temporary: go straight to the study site. The masked reader is disabled
-  // until the content host's firewall allows our server through.
+function BatchLauncher() {
+  // Direct open, no proxy and no referrer — a referrer or stale cookies from our
+  // site made the study host bounce the request back and forth ("redirected you
+  // too many times"). A plain no-referrer new-tab open avoids that loop.
   const openBatches = () => {
-    setBusy(true);
-    window.location.href = "https://pwthor.live/study/batches";
+    const a = document.createElement("a");
+    a.href = BATCH_URL;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.referrerPolicy = "no-referrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
   return (
@@ -242,10 +249,24 @@ function BatchLauncher() {
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
           Everything in your plan is unlocked. Tap the button below to start studying.
         </p>
-        <Button size="lg" className="mt-5 w-full sm:w-auto" disabled={busy} onClick={openBatches}>
-          <Rocket className="mr-2 h-5 w-5" /> {busy ? "Opening…" : "Open batches"}
+        <Button size="lg" className="mt-5 w-full sm:w-auto" onClick={openBatches}>
+          <Rocket className="mr-2 h-5 w-5" /> Open batches
         </Button>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Not opening?{" "}
+          <a
+            href={BATCH_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            referrerPolicy="no-referrer"
+            className="font-semibold text-primary underline"
+          >
+            Tap here
+          </a>
+          .
+        </p>
       </section>
+
 
       <section className="glow-card rounded-2xl p-6">
         <h2 className="font-display text-2xl tracking-wide">How to use</h2>
