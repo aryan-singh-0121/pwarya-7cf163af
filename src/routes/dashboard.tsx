@@ -225,28 +225,21 @@ const STUDY_STEPS = [
 const BATCH_URL = "https://pwthor.live/study/batches";
 
 function BatchLauncher() {
-  // The study host blocks being shown inside another page (ERR_BLOCKED_BY_RESPONSE),
-  // so we always leave this page entirely: top-level navigation first, and a plain
-  // new-tab open only as a fallback when the top window is not reachable.
+  // Some shells (preview frames, in-app browsers) silently block top-frame
+  // navigation, so we try several ways in order and always end up leaving
+  // this page for the study site.
   const openBatches = () => {
+    const win = window.open(BATCH_URL, "_blank", "noopener,noreferrer");
+    if (win) return;
     try {
       if (window.top && window.top !== window.self) {
         window.top.location.href = BATCH_URL;
         return;
       }
     } catch {
-      // Cross-origin preview shell: fall through to a normal new tab.
-      const a = document.createElement("a");
-      a.href = BATCH_URL;
-      a.target = "_top";
-      a.rel = "noopener noreferrer";
-      a.referrerPolicy = "no-referrer";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      return;
+      /* cross-origin shell: fall through */
     }
-    window.location.href = BATCH_URL;
+    window.location.assign(BATCH_URL);
   };
 
   return (
@@ -264,18 +257,30 @@ function BatchLauncher() {
         </Button>
         <p className="mt-3 text-xs text-muted-foreground">
           Not opening?{" "}
-          <a
-            href={BATCH_URL}
-            target="_top"
-            rel="noopener noreferrer"
-            referrerPolicy="no-referrer"
+          <button
+            type="button"
+            onClick={() => window.location.assign(BATCH_URL)}
             className="font-semibold text-primary underline"
           >
             Tap here
-          </a>
+          </button>{" "}
+          or{" "}
+          <button
+            type="button"
+            onClick={() => {
+              void navigator.clipboard
+                .writeText(BATCH_URL)
+                .then(() => toast.success("Link copied — paste it in your browser"))
+                .catch(() => toast.error(BATCH_URL));
+            }}
+            className="font-semibold text-primary underline"
+          >
+            copy the link
+          </button>
           .
         </p>
       </section>
+
 
 
 
