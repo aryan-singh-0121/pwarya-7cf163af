@@ -225,23 +225,6 @@ const STUDY_STEPS = [
 const BATCH_URL = "https://pwthor.live/study/batches";
 
 function BatchLauncher() {
-  // Some shells (preview frames, in-app browsers) silently block top-frame
-  // navigation, so we try several ways in order and always end up leaving
-  // this page for the study site.
-  const openBatches = () => {
-    const win = window.open(BATCH_URL, "_blank", "noopener,noreferrer");
-    if (win) return;
-    try {
-      if (window.top && window.top !== window.self) {
-        window.top.location.href = BATCH_URL;
-        return;
-      }
-    } catch {
-      /* cross-origin shell: fall through */
-    }
-    window.location.assign(BATCH_URL);
-  };
-
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-5 py-8">
       <section className="glow-card rounded-2xl p-6 text-center">
@@ -252,33 +235,11 @@ function BatchLauncher() {
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
           Everything in your plan is unlocked. Tap the button below to start studying.
         </p>
-        <Button size="lg" className="mt-5 w-full sm:w-auto" onClick={openBatches}>
-          <Rocket className="mr-2 h-5 w-5" /> Open batches
+        <Button asChild size="lg" className="mt-5 w-full sm:w-auto">
+          <a href={BATCH_URL} target="_self" rel="noreferrer">
+            <Rocket className="mr-2 h-5 w-5" /> Open batches
+          </a>
         </Button>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Not opening?{" "}
-          <button
-            type="button"
-            onClick={() => window.location.assign(BATCH_URL)}
-            className="font-semibold text-primary underline"
-          >
-            Tap here
-          </button>{" "}
-          or{" "}
-          <button
-            type="button"
-            onClick={() => {
-              void navigator.clipboard
-                .writeText(BATCH_URL)
-                .then(() => toast.success("Link copied — paste it in your browser"))
-                .catch(() => toast.error(BATCH_URL));
-            }}
-            className="font-semibold text-primary underline"
-          >
-            copy the link
-          </button>
-          .
-        </p>
       </section>
 
 
