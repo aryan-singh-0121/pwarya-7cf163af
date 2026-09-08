@@ -225,18 +225,28 @@ const STUDY_STEPS = [
 const BATCH_URL = "https://pwthor.live/study/batches";
 
 function BatchLauncher() {
-  // Direct open, no proxy and no referrer — a referrer or stale cookies from our
-  // site made the study host bounce the request back and forth ("redirected you
-  // too many times"). A plain no-referrer new-tab open avoids that loop.
+  // The study host blocks being shown inside another page (ERR_BLOCKED_BY_RESPONSE),
+  // so we always leave this page entirely: top-level navigation first, and a plain
+  // new-tab open only as a fallback when the top window is not reachable.
   const openBatches = () => {
-    const a = document.createElement("a");
-    a.href = BATCH_URL;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    a.referrerPolicy = "no-referrer";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    try {
+      if (window.top && window.top !== window.self) {
+        window.top.location.href = BATCH_URL;
+        return;
+      }
+    } catch {
+      // Cross-origin preview shell: fall through to a normal new tab.
+      const a = document.createElement("a");
+      a.href = BATCH_URL;
+      a.target = "_top";
+      a.rel = "noopener noreferrer";
+      a.referrerPolicy = "no-referrer";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return;
+    }
+    window.location.href = BATCH_URL;
   };
 
   return (
@@ -256,7 +266,7 @@ function BatchLauncher() {
           Not opening?{" "}
           <a
             href={BATCH_URL}
-            target="_blank"
+            target="_top"
             rel="noopener noreferrer"
             referrerPolicy="no-referrer"
             className="font-semibold text-primary underline"
@@ -266,6 +276,7 @@ function BatchLauncher() {
           .
         </p>
       </section>
+
 
 
       <section className="glow-card rounded-2xl p-6">
