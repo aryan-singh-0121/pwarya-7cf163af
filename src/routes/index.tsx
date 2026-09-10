@@ -117,6 +117,7 @@ function Home() {
             { icon: ShieldCheck, text: "Encrypted, verified payments" },
             { icon: Smartphone, text: "One secure device per account" },
             { icon: BadgeCheck, text: "24x7 Telegram support" },
+            { icon: ShieldCheck, text: "If we are unable to provide the subscribed content before your subscription expires, you will receive a 2× refund of your subscription amount."},
           ].map(({ icon: Icon, text }) => (
             <div key={text} className="glow-card rounded-xl p-4 text-left">
               <Icon className="h-5 w-5 text-primary" />
