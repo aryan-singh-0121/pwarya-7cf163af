@@ -199,7 +199,7 @@ type Sub = {
 const STUDY_STEPS = [
   {
     title: "Tap Open batches",
-    text: "This opens your study library directly on the device, without redirect tricks or extra pop-ups.",
+    text: "This opens your study library directly on the device, without redirect loops or extra pop-ups.",
   },
   {
     title: "Pick your batch",
