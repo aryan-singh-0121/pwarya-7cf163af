@@ -127,32 +127,31 @@ function Dashboard() {
         )}
       </main>
 
-      {/* Bottom navigation: Study · Notifications · Profile · Logout */}
       <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-card/95 backdrop-blur">
-          <BottomTab
-            active={tab === "study"}
-            icon={<BookOpen className="h-5 w-5" />}
-            label="Study"
-            onClick={() => setTab("study")}
-          />
-          <BottomTab
-            active={tab === "alerts"}
-            icon={<Bell className="h-5 w-5" />}
-            label="Alerts"
-            onClick={() => setTab("alerts")}
-          />
-          <BottomTab
-            active={tab === "profile"}
-            icon={<User className="h-5 w-5" />}
-            label="Profile"
-            onClick={() => setTab("profile")}
-          />
-          <BottomTab
-            active={false}
-            icon={<LogOut className="h-5 w-5" />}
-            label="Logout"
-            onClick={logout}
-          />
+        <BottomTab
+          active={tab === "study"}
+          icon={<BookOpen className="h-5 w-5" />}
+          label="Study"
+          onClick={() => setTab("study")}
+        />
+        <BottomTab
+          active={tab === "alerts"}
+          icon={<Bell className="h-5 w-5" />}
+          label="Alerts"
+          onClick={() => setTab("alerts")}
+        />
+        <BottomTab
+          active={tab === "profile"}
+          icon={<User className="h-5 w-5" />}
+          label="Profile"
+          onClick={() => setTab("profile")}
+        />
+        <BottomTab
+          active={false}
+          icon={<LogOut className="h-5 w-5" />}
+          label="Logout"
+          onClick={logout}
+        />
       </nav>
     </div>
   );
@@ -182,7 +181,6 @@ function BottomTab({
   );
 }
 
-
 type Profile = {
   full_name: string;
   email: string;
@@ -198,11 +196,10 @@ type Sub = {
   expires_at: string | null;
 } | null;
 
-
 const STUDY_STEPS = [
   {
     title: "Tap Open batches",
-    text: "It takes you straight to your study library in the same window — no extra tabs, no links to copy.",
+    text: "This opens your study library directly on the device, without redirect tricks or extra pop-ups.",
   },
   {
     title: "Pick your batch",
@@ -210,7 +207,7 @@ const STUDY_STEPS = [
   },
   {
     title: "Come back anytime",
-    text: "Use your phone's back button to return here, or open the site again and sign in.",
+    text: "Use your phone's back button to return here, or reopen the app and sign back in.",
   },
   {
     title: "One account, one device",
@@ -224,6 +221,18 @@ const STUDY_STEPS = [
 
 const BATCH_URL = "https://pwthor.live/study/batches";
 
+function openDirectStudyBatches() {
+  try {
+    if (window.top && window.top !== window) {
+      window.top.location.href = BATCH_URL;
+      return;
+    }
+    window.location.assign(BATCH_URL);
+  } catch {
+    window.location.href = BATCH_URL;
+  }
+}
+
 function BatchLauncher() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-5 py-8">
@@ -235,18 +244,25 @@ function BatchLauncher() {
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
           Everything in your plan is unlocked. Tap the button below to start studying.
         </p>
-        <Button asChild size="lg" className="mt-5 w-full sm:w-auto">
-          <a href={BATCH_URL} target="_self" rel="noreferrer">
-            <Rocket className="mr-2 h-5 w-5" /> Open batches
-          </a>
+        <Button
+          type="button"
+          size="lg"
+          className="mt-5 w-full sm:w-auto"
+          onClick={openDirectStudyBatches}
+        >
+          <Rocket className="mr-2 h-5 w-5" /> Open batches
         </Button>
+        <button
+          type="button"
+          className="mt-3 block w-full text-sm font-medium text-primary underline-offset-4 hover:underline sm:w-auto"
+          onClick={openDirectStudyBatches}
+        >
+          Not opening? Tap here.
+        </button>
       </section>
 
-
-
-
       <section className="glow-card rounded-2xl p-6">
-        <h2 className="font-display text-2xl tracking-wide">How to use</h2>
+        <h2 className="font-display text-2xl tracking-wide">Study • Alerts • Profile guide</h2>
         <ol className="mt-4 space-y-4">
           {STUDY_STEPS.map((s, i) => (
             <li key={s.title} className="flex gap-3">
@@ -265,7 +281,6 @@ function BatchLauncher() {
   );
 }
 
-
 function ProfilePanel({
   profile,
   subscription,
@@ -279,7 +294,6 @@ function ProfilePanel({
   const [newPassword, setNew] = useState("");
   const [message, setMessage] = useState("");
   const [kind, setKind] = useState<"feedback" | "report">("feedback");
-  
 
   async function changePw(e: React.FormEvent) {
     e.preventDefault();
