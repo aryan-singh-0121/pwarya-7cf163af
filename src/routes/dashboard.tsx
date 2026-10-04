@@ -369,9 +369,9 @@ function ProfilePanel({
             value={newPassword}
             onChange={(e) => setNew(e.target.value)}
           />
-          <p className="mt-1 text-xs text-muted-foreground">Use at least 6 characters.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Use at least 5 characters.</p>
         </div>
-        <Button type="submit" disabled={newPassword.length < 6}>
+        <Button type="submit" disabled={newPassword.length < 5}>
           Update password
         </Button>
       </form>
