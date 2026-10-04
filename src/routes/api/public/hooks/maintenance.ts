@@ -79,6 +79,12 @@ export const Route = createFileRoute("/api/public/hooks/maintenance")({
           }
         }
 
+        // Notifications the member did not delete are removed after 7 days.
+        const { count: oldNotifications } = await supabaseAdmin
+          .from("notifications")
+          .delete({ count: "exact" })
+          .lt("created_at", new Date(Date.now() - 7 * 86400000).toISOString());
+
         // Motivational / encouragement push every ~2-3 days for active members.
         const MOTIVATION = [
           "Every hour you study today buys you an easier tomorrow. Keep going!",
@@ -123,6 +129,7 @@ export const Route = createFileRoute("/api/public/hooks/maintenance")({
           expiredSubscriptions: expired?.length ?? 0,
           removedAccounts,
           motivationSent: motivated,
+          deletedOldNotifications: oldNotifications ?? 0,
         });
       },
     },

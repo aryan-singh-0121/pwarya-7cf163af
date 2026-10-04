@@ -15,12 +15,12 @@ export const Route = createFileRoute("/track")({
       {
         name: "description",
         content:
-          "Enter your 12-digit UTR number to see whether your PW ARYA membership payment is pending, approved or rejected, along with the admin's reason.",
+          "Enter your 12-digit payment reference number to see whether your PW ARYA membership payment is pending, approved or rejected, along with the admin's reason.",
       },
       { property: "og:title", content: "Track Your Payment — PW ARYA" },
       {
         property: "og:description",
-        content: "Check the approval status of your PW ARYA membership payment by UTR.",
+        content: "Check the approval status of your PW ARYA membership payment by reference number.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -46,7 +46,7 @@ function TrackPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!/^[0-9]{12}$/.test(utr)) {
-      toast.error("UTR must be exactly 12 digits");
+      toast.error("Reference number must be exactly 12 digits");
       return;
     }
     setBusy(true);
@@ -92,7 +92,7 @@ function TrackPage() {
 
         <form onSubmit={onSubmit} className="glow-card mt-6 space-y-4 rounded-2xl p-6">
           <div>
-            <Label htmlFor="utr">UTR number (12 digits)</Label>
+            <Label htmlFor="utr">Reference number (12 digits)</Label>
             <Input
               id="utr"
               inputMode="numeric"
@@ -110,7 +110,7 @@ function TrackPage() {
 
         {result && !result.found ? (
           <div className="glow-card mt-6 rounded-2xl p-6 text-center text-muted-foreground">
-            No payment found for this UTR. Please check the number you entered.
+            No payment found for this reference number. Please check the number you entered.
           </div>
         ) : null}
 

@@ -80,7 +80,7 @@ function Home() {
         </span>
         <nav className="flex items-center gap-2">
           <Button asChild variant="ghost" size="sm">
-            <Link to="/track">Track UTR</Link>
+            <Link to="/track">Track payment</Link>
           </Button>
           <Button asChild variant="ghost" size="sm">
             <Link to="/login">Login</Link>
@@ -144,6 +144,9 @@ function Home() {
 
       <section className="mx-auto max-w-6xl px-5 pb-16">
         <h2 className="font-display text-3xl tracking-wide">Membership pricing</h2>
+        <div className="mt-3 max-w-xl">
+          <RefundBadge />
+        </div>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {(plans.data ?? []).map((p) => (
             <div key={p.code} className="glow-card animate-float-soft rounded-2xl p-5">
@@ -239,11 +242,21 @@ function PaymentSection({
     phone: "",
     password: "",
     planCode: "",
-    utr: "",
   });
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
   const [payQr, setPayQr] = useState<string | null>(null);
 
   // Keeps the pricing cards ("Choose") and the dropdown in sync.
@@ -298,10 +311,6 @@ function PaymentSection({
       toast.error("Password must be at least 6 characters");
       return;
     }
-    if (!/^[0-9]{12}$/.test(form.utr)) {
-      toast.error("UTR must be exactly 12 digits");
-      return;
-    }
     if (!file) {
       toast.error("Please attach your payment screenshot");
       return;
@@ -324,7 +333,7 @@ function PaymentSection({
         toast.error(res.error);
         return;
       }
-      setDone(true);
+      setDone(res.reference);
       toast.success("Payment submitted! We will verify it shortly.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not submit, please retry");
@@ -337,8 +346,8 @@ function PaymentSection({
     <section id="pay" className="mx-auto max-w-6xl px-5 pb-20">
       <h2 className="font-display text-3xl tracking-wide">Pay to access</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        Select your plan, pay with the QR or the pay button, then submit your 12-digit UTR with the
-        screenshot and the login details you want. Access switches on the moment we approve.
+        Select your plan, pay with the QR or the pay button, then upload your payment screenshot
+        with the login details you want. Access switches on the moment we approve.
       </p>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -423,8 +432,13 @@ function PaymentSection({
               Your payment is under verification. After approval you can log in with the same
               email/phone and password you just set.
             </p>
+            <p className="mt-4 text-sm">
+              Your reference number:{" "}
+              <span className="font-mono text-lg font-bold text-primary">{done}</span>
+            </p>
+            <p className="text-xs text-muted-foreground">Save it to track your payment.</p>
             <Button asChild variant="secondary" className="mt-4">
-              <Link to="/track">Track my UTR</Link>
+              <Link to="/track">Track my payment</Link>
             </Button>
           </div>
         ) : (
@@ -477,36 +491,47 @@ function PaymentSection({
             </div>
 
             <div>
-              <Label htmlFor="utr">UTR number (12 digits)</Label>
-              <Input
-                id="utr"
-                required
-                inputMode="numeric"
-                pattern="[0-9]{12}"
-                placeholder="123456789012"
-                value={form.utr}
-                onChange={(e) => set("utr", e.target.value.replace(/\D/g, "").slice(0, 12))}
-              />
-              <p className="mt-1 text-xs text-muted-foreground">{form.utr.length}/12 digits</p>
-            </div>
-
-            <div>
               <Label htmlFor="proof">Payment screenshot</Label>
               <label
                 htmlFor="proof"
-                className="mt-1 flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground"
+                className="mt-1 flex min-h-56 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-primary/40 bg-card/40 p-4 text-center text-sm text-muted-foreground transition hover:border-primary"
               >
-                <Upload className="h-4 w-4" />
-                {file ? file.name : "Choose image"}
+                {preview ? (
+                  <>
+                    <img
+                      src={preview}
+                      alt="Your payment screenshot"
+                      className="max-h-72 w-auto rounded-lg object-contain"
+                    />
+                    <span className="text-xs">{file?.name} — tap to change</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-10 w-10 text-primary" />
+                    <span className="text-base font-semibold text-foreground">
+                      Upload payment screenshot
+                    </span>
+                    <span className="text-xs">PNG, JPG or WEBP · up to 10 MB</span>
+                  </>
+                )}
               </label>
               <input
                 id="proof"
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null;
+                  if (f && f.size > 10 * 1024 * 1024) {
+                    toast.error("Screenshot must be under 10 MB");
+                    return;
+                  }
+                  setFile(f);
+                }}
               />
             </div>
+
+            <RefundBadge />
 
             <Button type="submit" className="w-full" disabled={busy}>
               {busy ? "Submitting..." : "Submit payment details"}
@@ -518,5 +543,17 @@ function PaymentSection({
         )}
       </div>
     </section>
+  );
+}
+
+function RefundBadge() {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-success/40 bg-success/10 p-3 text-left">
+      <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-success" />
+      <p className="text-xs leading-relaxed">
+        <span className="font-bold text-success">2× refund guarantee</span> — if we cannot provide
+        your batch before your subscription ends, you get double your money back.
+      </p>
+    </div>
   );
 }

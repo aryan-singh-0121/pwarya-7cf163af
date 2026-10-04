@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ShieldCheck, LogIn, Wallet, Search, CheckCircle2, XCircle, Clock } from "lucide-react";
@@ -34,6 +34,14 @@ type Tab = "login" | "buy" | "track";
 
 function LoginPage() {
   const [tab, setTab] = useState<Tab>("login");
+  const navigate = useNavigate();
+
+  // Already signed in on this device? Skip the login screen.
+  useEffect(() => {
+    void supabase.auth.getSession().then(({ data }) => {
+      if (data.session) navigate({ to: "/dashboard" });
+    });
+  }, [navigate]);
 
   return (
     <div className="hero-surface min-h-screen px-5 py-12">
@@ -53,7 +61,7 @@ function LoginPage() {
             Buy a plan
           </TabButton>
           <TabButton active={tab === "track"} onClick={() => setTab("track")} icon={<Search className="h-4 w-4" />}>
-            Track UTR
+            Track
           </TabButton>
         </div>
 
@@ -185,7 +193,7 @@ function BuyPanel() {
     <div className="glow-card mt-5 space-y-4 rounded-2xl p-6">
       <h1 className="font-display text-3xl tracking-wide">Buy a plan</h1>
       <p className="text-sm text-muted-foreground">
-        Pick a membership, scan the UPI QR for that exact amount and submit your 12-digit UTR.
+        Pick a membership, scan the UPI QR for that exact amount and upload your payment screenshot.
       </p>
       <div className="space-y-2">
         {(plans.data ?? []).map((p) => (
@@ -225,7 +233,7 @@ function TrackPanel() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!/^[0-9]{12}$/.test(utr)) {
-      toast.error("UTR must be exactly 12 digits");
+      toast.error("Reference number must be exactly 12 digits");
       return;
     }
     setBusy(true);
@@ -241,9 +249,9 @@ function TrackPanel() {
   return (
     <div className="mt-5 space-y-4">
       <form onSubmit={onSubmit} className="glow-card space-y-4 rounded-2xl p-6">
-        <h1 className="font-display text-3xl tracking-wide">Track my UTR</h1>
+        <h1 className="font-display text-3xl tracking-wide">Track my payment</h1>
         <div>
-          <Label htmlFor="utr">UTR number (12 digits)</Label>
+          <Label htmlFor="utr">Reference number (12 digits)</Label>
           <Input
             id="utr"
             inputMode="numeric"
@@ -263,7 +271,7 @@ function TrackPanel() {
 
       {result && !result.found ? (
         <p className="glow-card rounded-2xl p-5 text-center text-sm text-muted-foreground">
-          No payment found for this UTR.
+          No payment found for this reference number.
         </p>
       ) : null}
 
