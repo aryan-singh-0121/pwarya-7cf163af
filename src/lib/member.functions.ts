@@ -250,7 +250,7 @@ export const changeMyPassword = createServerFn({ method: "POST" })
     z
       .object({
         oldPassword: z.string().min(1).max(72),
-        newPassword: z.string().min(6, "Password must be at least 6 characters").max(72),
+        newPassword: z.string().min(5, "Password must be at least 5 characters").max(72),
       })
       .parse(d),
   )

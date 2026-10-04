@@ -307,8 +307,8 @@ function PaymentSection({
       toast.error("Phone number must be 10 digits");
       return;
     }
-    if (form.password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    if (form.password.length < 5) {
+      toast.error("Password must be at least 5 characters");
       return;
     }
     if (!file) {
@@ -485,7 +485,7 @@ function PaymentSection({
                   onChange={(e) => set("password", e.target.value)}
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Use at least 6 characters.
+                  Use at least 5 characters.
                 </p>
               </div>
             </div>
