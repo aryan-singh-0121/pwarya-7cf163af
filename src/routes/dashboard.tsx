@@ -461,7 +461,6 @@ function NotificationsPanel() {
         Delete any notification yourself — anything left is removed automatically after 7 days.
       </p>
       {list.isLoading || items.length === 0 ? null : (
-      ) : (
         items.map((n) => (
           <article key={n.id} className="glow-card rounded-2xl p-5">
             <div className="flex items-center gap-2">

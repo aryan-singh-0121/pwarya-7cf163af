@@ -42,6 +42,6 @@ export function decisionEmail(name: string, reason: string) {
     <p>Hi ${name},</p>
     <p>Your payment request could not be approved.</p>
     <p><b>Reason:</b> ${reason}</p>
-    <p>You can track your UTR status any time on our website.</p>
+    <p>You can track your payment status any time on our website.</p>
   </div>`;
 }
