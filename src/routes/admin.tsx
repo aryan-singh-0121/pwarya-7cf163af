@@ -305,7 +305,7 @@ function Payments({ requests, refresh }: { requests: any[]; refresh: () => void 
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="UTR" value={r.utr} mono />
+              <Field label="Reference" value={r.utr} mono />
               <Field label="Plan" value={r.plan_code} />
               <Field label="Email" value={r.email} />
               <Field label="Phone" value={r.phone} />
@@ -335,7 +335,7 @@ function Payments({ requests, refresh }: { requests: any[]; refresh: () => void 
               reasonFor === r.id ? (
                 <div className="space-y-2">
                   <Textarea
-                    placeholder="Why is this payment being rejected? The buyer sees this on the UTR tracker."
+                    placeholder="Why is this payment being rejected? The buyer sees this on the payment tracker."
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                   />

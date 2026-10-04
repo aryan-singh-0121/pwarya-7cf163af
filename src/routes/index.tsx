@@ -80,7 +80,7 @@ function Home() {
         </span>
         <nav className="flex items-center gap-2">
           <Button asChild variant="ghost" size="sm">
-            <Link to="/track">Track UTR</Link>
+            <Link to="/track">Track payment</Link>
           </Button>
           <Button asChild variant="ghost" size="sm">
             <Link to="/login">Login</Link>
@@ -144,6 +144,9 @@ function Home() {
 
       <section className="mx-auto max-w-6xl px-5 pb-16">
         <h2 className="font-display text-3xl tracking-wide">Membership pricing</h2>
+        <div className="mt-3 max-w-xl">
+          <RefundBadge />
+        </div>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {(plans.data ?? []).map((p) => (
             <div key={p.code} className="glow-card animate-float-soft rounded-2xl p-5">

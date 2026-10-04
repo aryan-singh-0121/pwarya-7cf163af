@@ -456,6 +456,11 @@ function NotificationsPanel() {
         <p className="text-sm text-muted-foreground">Loading...</p>
       ) : items.length === 0 ? (
         <p className="text-sm text-muted-foreground">No notifications yet.</p>
+      ) : null}
+      <p className="text-xs text-muted-foreground">
+        Delete any notification yourself — anything left is removed automatically after 7 days.
+      </p>
+      {list.isLoading || items.length === 0 ? null : (
       ) : (
         items.map((n) => (
           <article key={n.id} className="glow-card rounded-2xl p-5">
