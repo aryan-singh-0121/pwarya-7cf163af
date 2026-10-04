@@ -347,6 +347,8 @@ export const getMyNotifications = createServerFn({ method: "POST" })
       .from("notifications")
       .select("id, title, body, read_at, created_at")
       .eq("user_id", context.userId)
+      // Notifications expire automatically after 7 days.
+      .gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString())
       .order("created_at", { ascending: false })
       .limit(50);
     return { items: data ?? [] };

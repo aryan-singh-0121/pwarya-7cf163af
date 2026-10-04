@@ -48,7 +48,6 @@ const submitSchema = z.object({
   phone: phoneSchema,
   password: passwordSchema,
   planCode: z.string().trim().min(1).max(20),
-  utr: z.string().trim().regex(/^[0-9]{12}$/, "UTR must be exactly 12 digits"),
   screenshotPath: z.string().trim().min(1).max(400),
   turnstileToken: z.string().optional(),
 });
@@ -74,12 +73,20 @@ export const submitPaymentRequest = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!plan) return { ok: false as const, error: "Please choose a valid plan." };
 
-    const { data: dupe } = await supabaseAdmin
-      .from("payment_requests")
-      .select("id")
-      .eq("utr", data.utr)
-      .maybeSingle();
-    if (dupe) return { ok: false as const, error: "This UTR has already been submitted." };
+    // Buyers no longer type a UTR: we issue a unique 12-digit reference number
+    // they can use on the payment tracker.
+    let reference = "";
+    for (let i = 0; i < 5 && !reference; i++) {
+      const bytes = crypto.getRandomValues(new Uint8Array(12));
+      const candidate = Array.from(bytes, (b) => String(b % 10)).join("").replace(/^0/, "9");
+      const { data: dupe } = await supabaseAdmin
+        .from("payment_requests")
+        .select("id")
+        .eq("utr", candidate)
+        .maybeSingle();
+      if (!dupe) reference = candidate;
+    }
+    if (!reference) return { ok: false as const, error: "Please try again." };
 
     // Existing member renewing, or a brand new account?
     const { data: existing } = await supabaseAdmin
@@ -128,7 +135,7 @@ export const submitPaymentRequest = createServerFn({ method: "POST" })
       holder_name: data.holderName,
       email: data.email,
       phone: data.phone,
-      utr: data.utr,
+      utr: reference,
       plan_code: data.planCode,
       screenshot_path: data.screenshotPath,
       status: "pending",
@@ -138,12 +145,12 @@ export const submitPaymentRequest = createServerFn({ method: "POST" })
     await writeAudit({
       action: "payment_submitted",
       targetType: "payment_request",
-      targetId: data.utr,
+      targetId: reference,
       email: data.email,
       details: { plan: data.planCode, ip: ip ?? null, newAccount: !existing },
     });
 
-    return { ok: true as const };
+    return { ok: true as const, reference };
   });
 
 /** Public UTR tracker so buyers can see approve/deny status and the reason. */
