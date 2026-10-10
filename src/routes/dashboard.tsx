@@ -222,15 +222,28 @@ const STUDY_STEPS = [
 const BATCH_URL = "https://pwthor.live/study/batches";
 
 function openDirectStudyBatches() {
-  try {
-    if (window.top && window.top !== window) {
-      window.top.location.href = BATCH_URL;
-      return;
+  // Inside an embedded frame (e.g. editor preview) the site refuses to load,
+  // so open it as a real top-level tab; otherwise navigate this tab directly.
+  const framed = (() => {
+    try {
+      return window.top !== window.self;
+    } catch {
+      return true;
     }
-    window.location.assign(BATCH_URL);
-  } catch {
-    window.location.href = BATCH_URL;
+  })();
+  if (framed) {
+    const w = window.open(BATCH_URL, "_blank", "noopener,noreferrer");
+    if (w) return;
+    const a = document.createElement("a");
+    a.href = BATCH_URL;
+    a.target = "_top";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return;
   }
+  window.location.assign(BATCH_URL);
 }
 
 function BatchLauncher() {

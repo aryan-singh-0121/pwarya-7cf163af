@@ -405,22 +405,33 @@ export const adminSaveSettings = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
       .object({
-        upi_id: z.string().trim().max(120),
-        qr_path: z.string().trim().max(400),
-        telegram_link: z.string().trim().max(300),
-        support_message: z.string().trim().max(300),
-        services_text: z.string().trim().max(4000),
-        demo_video_url: z.string().trim().max(400),
-        video_popup_enabled: z.boolean(),
-        video_popup_url: z.string().trim().max(400),
-        instagram_link: z.string().trim().max(300),
-        instagram_popup_enabled: z.boolean(),
-        instagram_message: z.string().trim().max(300),
-        content_url: z.string().trim().url().max(400),
-        content_headers: z.string().trim().max(2000).optional().default(""),
-        content_proxy_url: z.string().trim().max(400).optional().default(""),
-        highlights: z.array(z.string().trim().max(120)).max(12),
-        marquee_lines: z.array(z.string().trim().max(120)).max(8),
+        upi_id: z.string().trim().max(120).catch(""),
+        qr_path: z.string().trim().max(400).catch(""),
+        telegram_link: z.string().trim().max(300).catch(""),
+        support_message: z.string().trim().max(1000).catch(""),
+        services_text: z.string().trim().max(8000).catch(""),
+        demo_video_url: z.string().trim().max(600).catch(""),
+        video_popup_enabled: z.boolean().catch(false),
+        video_popup_url: z.string().trim().max(600).catch(""),
+        instagram_link: z.string().trim().max(400).catch(""),
+        instagram_popup_enabled: z.boolean().catch(false),
+        instagram_message: z.string().trim().max(1000).catch(""),
+        content_url: z
+          .string()
+          .trim()
+          .max(600)
+          .transform((v) => (/^https?:\/\//i.test(v) ? v : "https://pwthor.live/study/batches"))
+          .catch("https://pwthor.live/study/batches"),
+        content_headers: z.string().trim().max(4000).optional().default(""),
+        content_proxy_url: z.string().trim().max(600).optional().default(""),
+        highlights: z
+          .array(z.string().trim())
+          .transform((a) => a.map((s) => s.slice(0, 200)).slice(0, 20))
+          .catch([]),
+        marquee_lines: z
+          .array(z.string().trim())
+          .transform((a) => a.map((s) => s.slice(0, 200)).slice(0, 20))
+          .catch([]),
       })
       .parse(d),
   )
