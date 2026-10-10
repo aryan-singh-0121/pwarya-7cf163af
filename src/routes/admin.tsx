@@ -967,13 +967,19 @@ function SettingsPanel({
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const res = await adminSaveSettings({
-      data: {
-        ...form,
-        highlights: form.highlights.split("\n").map((s) => s.trim()).filter(Boolean),
-        marquee_lines: form.marquee_lines.split("\n").map((s) => s.trim()).filter(Boolean),
-      },
-    });
+    let res: Awaited<ReturnType<typeof adminSaveSettings>>;
+    try {
+      res = await adminSaveSettings({
+        data: {
+          ...form,
+          highlights: form.highlights.split("\n").map((s) => s.trim()).filter(Boolean),
+          marquee_lines: form.marquee_lines.split("\n").map((s) => s.trim()).filter(Boolean),
+        },
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save settings.");
+      return;
+    }
     if (!res.ok) {
       toast.error(res.error);
       return;
