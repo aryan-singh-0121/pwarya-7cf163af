@@ -221,9 +221,49 @@ const STUDY_STEPS = [
 
 const BATCH_URL = "https://pwthor.live/study/batches";
 
+/**
+ * Opens the batches site as a real top-level visit from the user's own device.
+ * "is blocked" only happens when the site is loaded inside another page
+ * (iframe / preview window), so we always break out to a top-level tab.
+ */
+function openOnDevice(e?: React.MouseEvent) {
+  e?.preventDefault();
+  const ua = navigator.userAgent || "";
+  const inFrame = (() => {
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true;
+    }
+  })();
+  const isAndroid = /Android/i.test(ua);
+  const inAppBrowser = /; wv\)|FBAN|FBAV|Instagram|Line\/|Telegram|WhatsApp/i.test(ua);
+
+  // Android in-app browsers (Instagram, Telegram, WhatsApp...) → hand off to Chrome.
+  if (isAndroid && inAppBrowser) {
+    const fallback = encodeURIComponent(BATCH_URL);
+    window.location.href = `intent://pwthor.live/study/batches#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${fallback};end`;
+    return;
+  }
+
+  // Inside a frame (e.g. editor preview): open a separate real browser tab.
+  if (inFrame) {
+    const w = window.open(BATCH_URL, "_blank", "noopener,noreferrer");
+    if (!w) {
+      try {
+        window.top!.location.href = BATCH_URL;
+      } catch {
+        toast.error("Please open the app directly in your phone browser and tap again.");
+      }
+    }
+    return;
+  }
+
+  // Normal phone / desktop browser: navigate the whole tab directly.
+  window.location.assign(BATCH_URL);
+}
+
 function BatchLauncher() {
-  // A real link the user taps: the phone's own browser opens the site in a
-  // fresh top-level tab. Never loaded inside our page (that causes "is blocked").
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-5 py-8">
       <section className="glow-card rounded-2xl p-6 text-center">
@@ -235,7 +275,7 @@ function BatchLauncher() {
           Everything in your plan is unlocked. Tap the button below to start studying.
         </p>
         <Button asChild size="lg" className="mt-5 w-full sm:w-auto">
-          <a href={BATCH_URL} target="_blank" rel="noopener noreferrer">
+          <a href={BATCH_URL} target="_top" rel="noreferrer" onClick={openOnDevice}>
             <Rocket className="mr-2 h-5 w-5" /> Open batches
           </a>
         </Button>
