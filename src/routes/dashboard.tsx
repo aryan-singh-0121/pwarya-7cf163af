@@ -221,32 +221,9 @@ const STUDY_STEPS = [
 
 const BATCH_URL = "https://pwthor.live/study/batches";
 
-function openDirectStudyBatches() {
-  // Inside an embedded frame (e.g. editor preview) the site refuses to load,
-  // so open it as a real top-level tab; otherwise navigate this tab directly.
-  const framed = (() => {
-    try {
-      return window.top !== window.self;
-    } catch {
-      return true;
-    }
-  })();
-  if (framed) {
-    const w = window.open(BATCH_URL, "_blank", "noopener,noreferrer");
-    if (w) return;
-    const a = document.createElement("a");
-    a.href = BATCH_URL;
-    a.target = "_top";
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    return;
-  }
-  window.location.assign(BATCH_URL);
-}
-
 function BatchLauncher() {
+  // A real link the user taps: the phone's own browser opens the site in a
+  // fresh top-level tab. Never loaded inside our page (that causes "is blocked").
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-5 py-8">
       <section className="glow-card rounded-2xl p-6 text-center">
@@ -257,21 +234,19 @@ function BatchLauncher() {
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
           Everything in your plan is unlocked. Tap the button below to start studying.
         </p>
-        <Button
-          type="button"
-          size="lg"
-          className="mt-5 w-full sm:w-auto"
-          onClick={openDirectStudyBatches}
-        >
-          <Rocket className="mr-2 h-5 w-5" /> Open batches
+        <Button asChild size="lg" className="mt-5 w-full sm:w-auto">
+          <a href={BATCH_URL} target="_blank" rel="noopener noreferrer">
+            <Rocket className="mr-2 h-5 w-5" /> Open batches
+          </a>
         </Button>
-        <button
-          type="button"
+        <a
+          href={BATCH_URL}
+          target="_blank"
+          rel="noopener noreferrer"
           className="mt-3 block w-full text-sm font-medium text-primary underline-offset-4 hover:underline sm:w-auto"
-          onClick={openDirectStudyBatches}
         >
           Not opening? Tap here.
-        </button>
+        </a>
       </section>
 
       <section className="glow-card rounded-2xl p-6">
