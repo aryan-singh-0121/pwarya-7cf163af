@@ -222,12 +222,11 @@ const STUDY_STEPS = [
 const BATCH_URL = "https://pwthor.live/study/batches";
 
 /**
- * Opens the batches site as a real top-level visit from the user's own device.
- * "is blocked" only happens when the site is loaded inside another page
- * (iframe / preview window), so we always break out to a top-level tab.
+ * Lets the browser follow a real link tap (most native, user-triggered visit).
+ * We only adjust the target: in-app browsers hand off to Chrome, framed pages
+ * open a new tab, everything else navigates the full tab directly.
  */
-function openOnDevice(e?: React.MouseEvent) {
-  e?.preventDefault();
+function openOnDevice(e: React.MouseEvent<HTMLAnchorElement>) {
   const ua = navigator.userAgent || "";
   const inFrame = (() => {
     try {
@@ -237,30 +236,18 @@ function openOnDevice(e?: React.MouseEvent) {
     }
   })();
   const isAndroid = /Android/i.test(ua);
-  const inAppBrowser = /; wv\)|FBAN|FBAV|Instagram|Line\/|Telegram|WhatsApp/i.test(ua);
+  const inAppBrowser = /FBAN|FBAV|Instagram|Line\/|Telegram|WhatsApp/i.test(ua);
 
-  // Android in-app browsers (Instagram, Telegram, WhatsApp...) → hand off to Chrome.
   if (isAndroid && inAppBrowser) {
+    e.preventDefault();
     const fallback = encodeURIComponent(BATCH_URL);
     window.location.href = `intent://pwthor.live/study/batches#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${fallback};end`;
     return;
   }
 
-  // Inside a frame (e.g. editor preview): open a separate real browser tab.
-  if (inFrame) {
-    const w = window.open(BATCH_URL, "_blank", "noopener,noreferrer");
-    if (!w) {
-      try {
-        window.top!.location.href = BATCH_URL;
-      } catch {
-        toast.error("Please open the app directly in your phone browser and tap again.");
-      }
-    }
-    return;
-  }
-
-  // Normal phone / desktop browser: navigate the whole tab directly.
-  window.location.assign(BATCH_URL);
+  // Inside a frame (e.g. editor preview): let the link open a real new tab.
+  e.currentTarget.target = inFrame ? "_blank" : "_self";
+  // No preventDefault — the browser performs the navigation itself.
 }
 
 function BatchLauncher() {
@@ -275,7 +262,13 @@ function BatchLauncher() {
           Everything in your plan is unlocked. Tap the button below to start studying.
         </p>
         <Button asChild size="lg" className="mt-5 w-full sm:w-auto">
-          <a href={BATCH_URL} target="_top" rel="noreferrer" onClick={openOnDevice}>
+          <a
+            href={BATCH_URL}
+            target="_self"
+            rel="noopener noreferrer"
+            referrerPolicy="no-referrer"
+            onClick={openOnDevice}
+          >
             <Rocket className="mr-2 h-5 w-5" /> Open batches
           </a>
         </Button>
