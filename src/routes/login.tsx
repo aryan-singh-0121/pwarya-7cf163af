@@ -11,6 +11,8 @@ import { startDeviceSession } from "@/lib/member.functions";
 import { memberSignIn, trackUtr } from "@/lib/public.functions";
 import { fetchPlans } from "@/lib/site";
 import { getDeviceId } from "@/hooks/useDeviceId";
+import { ensureSession } from "@/lib/remember";
+import { rememberDevice } from "@/lib/remember.functions";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -38,8 +40,8 @@ function LoginPage() {
 
   // Already signed in on this device? Skip the login screen.
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard" });
+    void ensureSession().then((ok) => {
+      if (ok) navigate({ to: "/dashboard" });
     });
   }, [navigate]);
 
@@ -131,6 +133,12 @@ function LoginForm() {
         await supabase.auth.signOut();
         toast.error(res.error);
         return;
+      }
+      const { data: fresh } = await supabase.auth.getSession();
+      if (fresh.session) {
+        await rememberDevice({ data: { refreshToken: fresh.session.refresh_token } }).catch(
+          () => null,
+        );
       }
       navigate({ to: "/dashboard" });
     } finally {
