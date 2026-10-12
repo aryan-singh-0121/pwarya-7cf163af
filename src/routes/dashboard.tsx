@@ -30,6 +30,8 @@ import {
 } from "@/lib/member.functions";
 
 import { getDeviceId } from "@/hooks/useDeviceId";
+import { ensureSession } from "@/lib/remember";
+import { forgetDevice } from "@/lib/remember.functions";
 
 export const Route = createFileRoute("/dashboard")({
   ssr: false,
@@ -61,8 +63,9 @@ function Dashboard() {
     enabled: !!deviceId,
     refetchInterval: 30000,
     queryFn: async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) {
+      // Restores the login from the device cookie, so members don't re-type credentials.
+      const ok = await ensureSession();
+      if (!ok) {
         navigate({ to: "/login" });
         return null;
       }
@@ -72,6 +75,7 @@ function Dashboard() {
 
   async function logout() {
     if (deviceId) await endDeviceSession({ data: { deviceId } }).catch(() => null);
+    await forgetDevice().catch(() => null);
     await supabase.auth.signOut();
     navigate({ to: "/login" });
   }
@@ -82,7 +86,10 @@ function Dashboard() {
   useEffect(() => {
     if (s && "evicted" in s && s.evicted) {
       toast.error("Signed out — this account was opened on another device.");
-      void supabase.auth.signOut().then(() => navigate({ to: "/login" }));
+      void forgetDevice()
+        .catch(() => null)
+        .then(() => supabase.auth.signOut())
+        .then(() => navigate({ to: "/login" }));
     }
   }, [s, navigate]);
 
@@ -222,9 +229,13 @@ const STUDY_STEPS = [
 const BATCH_URL = "https://pwthor.live/study/batches";
 
 /**
- * Lets the browser follow a real link tap (most native, user-triggered visit).
- * We only adjust the target: in-app browsers hand off to Chrome, framed pages
- * open a new tab, everything else navigates the full tab directly.
+ * Opens pwthor.live as a real top-level page on the user's own device.
+ * "is blocked / refused to connect / ERR_BLOCKED_BY_RESPONSE" only happens when
+ * the site is loaded *inside* another page (a frame or an app wrapper), so we
+ * always escape that container:
+ *  - Android app wrappers / in-app browsers (WebView) → hand off to Chrome.
+ *  - Inside a frame → open a separate browser tab/window.
+ *  - Normal browser or installed home-screen app → plain link tap.
  */
 function openOnDevice(e: React.MouseEvent<HTMLAnchorElement>) {
   const ua = navigator.userAgent || "";
@@ -236,18 +247,39 @@ function openOnDevice(e: React.MouseEvent<HTMLAnchorElement>) {
     }
   })();
   const isAndroid = /Android/i.test(ua);
-  const inAppBrowser = /FBAN|FBAV|Instagram|Line\/|Telegram|WhatsApp/i.test(ua);
+  const isWebView = /; wv\)|FBAN|FBAV|Instagram|Line\/|Telegram|WhatsApp|GSA\//i.test(ua);
 
-  if (isAndroid && inAppBrowser) {
+  if (isAndroid && (isWebView || inFrame)) {
     e.preventDefault();
     const fallback = encodeURIComponent(BATCH_URL);
-    window.location.href = `intent://pwthor.live/study/batches#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${fallback};end`;
+    const intent = `intent://pwthor.live/study/batches#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${fallback};end`;
+    try {
+      if (inFrame && window.top) window.top.location.href = intent;
+      else window.location.href = intent;
+    } catch {
+      const w = window.open(BATCH_URL, "_blank");
+      if (w) w.opener = null;
+    }
     return;
   }
 
-  // Inside a frame (e.g. editor preview): let the link open a real new tab.
-  e.currentTarget.target = inFrame ? "_blank" : "_self";
-  // No preventDefault — the browser performs the navigation itself.
+  if (inFrame) {
+    e.preventDefault();
+    const w = window.open(BATCH_URL, "_blank");
+    if (w) {
+      w.opener = null;
+      return;
+    }
+    try {
+      if (window.top) window.top.location.href = BATCH_URL;
+    } catch {
+      /* popup blocked and top navigation denied — nothing else we can do */
+    }
+    return;
+  }
+
+  // Normal browser / installed app: let the browser follow the link itself.
+  e.currentTarget.target = "_self";
 }
 
 function BatchLauncher() {
