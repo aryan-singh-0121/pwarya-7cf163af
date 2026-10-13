@@ -324,68 +324,150 @@ function ProfilePanel({
 }) {
   const [oldPassword, setOld] = useState("");
   const [newPassword, setNew] = useState("");
+  const [confirmPassword, setConfirm] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [savingPw, setSavingPw] = useState(false);
+  const [sending, setSending] = useState(false);
   const [message, setMessage] = useState("");
   const [kind, setKind] = useState<"feedback" | "report">("feedback");
 
+  const expires = subscription?.expires_at ? new Date(subscription.expires_at) : null;
+  const starts = subscription?.starts_at ? new Date(subscription.starts_at) : null;
+  const daysLeft = expires ? Math.max(0, Math.ceil((expires.getTime() - Date.now()) / 86400000)) : null;
+  const totalDays =
+    expires && starts ? Math.max(1, Math.ceil((expires.getTime() - starts.getTime()) / 86400000)) : null;
+  const pct = daysLeft !== null && totalDays ? Math.min(100, Math.round((daysLeft / totalDays) * 100)) : 0;
+  const initials = (profile?.full_name || profile?.email || "?")
+    .split(/[\s@]/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join("");
+  const mismatch = confirmPassword.length > 0 && confirmPassword !== newPassword;
+
   async function changePw(e: React.FormEvent) {
     e.preventDefault();
-    const res = await changeMyPassword({ data: { oldPassword, newPassword } });
-    if (!res.ok) {
-      toast.error(res.error);
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords do not match");
       return;
     }
-    setOld("");
-    setNew("");
-    toast.success("Password updated");
+    setSavingPw(true);
+    try {
+      const res = await changeMyPassword({ data: { oldPassword, newPassword } });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      setOld("");
+      setNew("");
+      setConfirm("");
+      toast.success("Password updated");
+    } catch {
+      toast.error("Could not update password. Try again.");
+    } finally {
+      setSavingPw(false);
+    }
   }
 
   async function submitFeedback(e: React.FormEvent) {
     e.preventDefault();
-    const res = await sendFeedback({ data: { kind, message } });
-    if (!res.ok) {
-      toast.error(res.error);
-      return;
+    setSending(true);
+    try {
+      const res = await sendFeedback({ data: { kind, message } });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      setMessage("");
+      toast.success("Thanks, we received it");
+    } catch {
+      toast.error("Could not send. Try again.");
+    } finally {
+      setSending(false);
     }
-    setMessage("");
-    toast.success("Thanks, we received it");
   }
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-5 py-8">
       <section className="glow-card rounded-2xl p-6">
-        <h2 className="font-display text-2xl tracking-wide">My details</h2>
-        <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/15 font-display text-2xl text-primary">
+            {initials}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-lg font-semibold">{profile?.full_name || "Member"}</p>
+            <p className="truncate text-sm text-muted-foreground">{profile?.email}</p>
+          </div>
+        </div>
+
+        {daysLeft !== null && (
+          <div className="mt-5">
+            <div className="flex justify-between text-xs uppercase tracking-widest text-muted-foreground">
+              <span>{subscription?.plan_code ?? "Plan"}</span>
+              <span>{daysLeft} days left</span>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-secondary">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+            </div>
+            {daysLeft <= 5 && (
+              <p className="mt-2 text-xs text-destructive">
+                Your plan ends soon. Renew from the home page to keep access.
+              </p>
+            )}
+          </div>
+        )}
+
+        <dl className="mt-5 grid gap-3 sm:grid-cols-2">
           {[
-            ["Name", profile?.full_name],
-            ["Email", profile?.email],
             ["Phone", profile?.phone],
             ["Account status", profile?.status],
-            ["Plan", subscription?.plan_code ?? "—"],
-            [
-              "Valid till",
-              subscription?.expires_at
-                ? new Date(subscription.expires_at).toLocaleDateString()
-                : "—",
-            ],
+            ["Member since", profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : null],
+            ["Valid till", expires ? expires.toLocaleDateString() : null],
           ].map(([k, v]) => (
             <div key={k as string}>
               <dt className="text-xs uppercase tracking-widest text-muted-foreground">{k}</dt>
-              <dd className="text-sm">{(v as string) ?? "—"}</dd>
+              <dd className="text-sm capitalize">{(v as string) || "—"}</dd>
             </div>
           ))}
         </dl>
-        <Button variant="ghost" size="sm" className="mt-4" onClick={onRefresh}>
-          <RefreshCw className="mr-1 h-4 w-4" /> Refresh
-        </Button>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button variant="ghost" size="sm" onClick={onRefresh}>
+            <RefreshCw className="mr-1 h-4 w-4" /> Refresh
+          </Button>
+          {profile?.email && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                navigator.clipboard
+                  ?.writeText(profile.email!)
+                  .then(() => toast.success("Email copied"))
+                  .catch(() => null)
+              }
+            >
+              Copy email
+            </Button>
+          )}
+        </div>
       </section>
 
       <form onSubmit={changePw} className="glow-card space-y-4 rounded-2xl p-6">
-        <h2 className="font-display text-2xl tracking-wide">Change password</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-2xl tracking-wide">Change password</h2>
+          <button
+            type="button"
+            className="text-xs font-medium text-primary"
+            onClick={() => setShowPw((v) => !v)}
+          >
+            {showPw ? "Hide" : "Show"}
+          </button>
+        </div>
         <div>
           <Label htmlFor="old">Old password</Label>
           <Input
             id="old"
-            type="password"
+            type={showPw ? "text" : "password"}
+            autoComplete="current-password"
             required
             value={oldPassword}
             onChange={(e) => setOld(e.target.value)}
@@ -395,49 +477,30 @@ function ProfilePanel({
           <Label htmlFor="new">New password</Label>
           <Input
             id="new"
-            type="password"
+            type={showPw ? "text" : "password"}
+            autoComplete="new-password"
             required
-            minLength={6}
+            minLength={5}
             value={newPassword}
             onChange={(e) => setNew(e.target.value)}
           />
           <p className="mt-1 text-xs text-muted-foreground">Use at least 5 characters.</p>
         </div>
-        <Button type="submit" disabled={newPassword.length < 5}>
-          Update password
-        </Button>
-      </form>
-
-      <form onSubmit={submitFeedback} className="glow-card space-y-4 rounded-2xl p-6">
-        <h2 className="font-display text-2xl tracking-wide">Report / feedback</h2>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={kind === "feedback" ? "default" : "secondary"}
-            onClick={() => setKind("feedback")}
-          >
-            Feedback
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={kind === "report" ? "default" : "secondary"}
-            onClick={() => setKind("report")}
-          >
-            Report issue
-          </Button>
+        <div>
+          <Label htmlFor="confirm">Confirm new password</Label>
+          <Input
+            id="confirm"
+            type={showPw ? "text" : "password"}
+            autoComplete="new-password"
+            required
+            value={confirmPassword}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
+          {mismatch && <p className="mt-1 text-xs text-destructive">Passwords do not match.</p>}
         </div>
-        <Textarea
-          required
-          minLength={5}
-          maxLength={1000}
-          rows={4}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Write your message..."
-        />
-        <Button type="submit">Send</Button>
+        <Button type="submit" disabled={savingPw || newPassword.length < 5 || mismatch}>
+          {savingPw ? "Updating..." : "Update password"}
+        </Button>
       </form>
     </div>
   );
