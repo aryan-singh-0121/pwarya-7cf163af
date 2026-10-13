@@ -246,40 +246,19 @@ function openOnDevice(e: React.MouseEvent<HTMLAnchorElement>) {
       return true;
     }
   })();
-  const isAndroid = /Android/i.test(ua);
-  const isWebView = /; wv\)|FBAN|FBAV|Instagram|Line\/|Telegram|WhatsApp|GSA\//i.test(ua);
+  const isAndroidWebView =
+    /Android/i.test(ua) && /; wv\)|FBAN|FBAV|Instagram|Line\/|Telegram|WhatsApp|GSA\//i.test(ua);
 
-  if (isAndroid && (isWebView || inFrame)) {
+  // App wrappers on Android: hand the link to Chrome so it opens as a real page.
+  if (isAndroidWebView && !inFrame) {
     e.preventDefault();
     const fallback = encodeURIComponent(BATCH_URL);
-    const intent = `intent://pwthor.live/study/batches#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${fallback};end`;
-    try {
-      if (inFrame && window.top) window.top.location.href = intent;
-      else window.location.href = intent;
-    } catch {
-      const w = window.open(BATCH_URL, "_blank");
-      if (w) w.opener = null;
-    }
+    window.location.href = `intent://pwthor.live/study/batches#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${fallback};end`;
     return;
   }
-
-  if (inFrame) {
-    e.preventDefault();
-    const w = window.open(BATCH_URL, "_blank");
-    if (w) {
-      w.opener = null;
-      return;
-    }
-    try {
-      if (window.top) window.top.location.href = BATCH_URL;
-    } catch {
-      /* popup blocked and top navigation denied — nothing else we can do */
-    }
-    return;
-  }
-
-  // Normal browser / installed app: let the browser follow the link itself.
-  e.currentTarget.target = "_self";
+  // Inside any frame: a native new-tab link tap (never blocked as a popup,
+  // never rendered inside our page). Otherwise: normal same-tab navigation.
+  e.currentTarget.target = inFrame ? "_blank" : "_self";
 }
 
 function BatchLauncher() {
