@@ -73,6 +73,23 @@ export const submitPaymentRequest = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!plan) return { ok: false as const, error: "Please choose a valid plan." };
 
+    // The screenshot must be a fresh upload slot issued by createProofUploadUrl
+    // and not already attached to any other payment request.
+    if (
+      !/^proofs\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|jpeg|webp)$/.test(
+        data.screenshotPath,
+      )
+    ) {
+      return { ok: false as const, error: "Please upload your payment screenshot again." };
+    }
+    const { data: proofUsed } = await supabaseAdmin
+      .from("payment_requests")
+      .select("id")
+      .eq("screenshot_path", data.screenshotPath)
+      .maybeSingle();
+    if (proofUsed)
+      return { ok: false as const, error: "Please upload your payment screenshot again." };
+
     // Buyers no longer type a UTR: we issue a unique 12-digit reference number
     // they can use on the payment tracker.
     let reference = "";

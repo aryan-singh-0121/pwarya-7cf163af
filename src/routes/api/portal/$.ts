@@ -63,14 +63,37 @@ export const Route = createFileRoute("/api/portal/$")({
         const url = new URL(request.url);
         const queryToken = url.searchParams.get("t") ?? "";
         const token = queryToken || readPortalCookie(request);
-        if (!verifyPortalToken(token)) {
-          return new Response("Access expired. Please reload your dashboard.", {
+        const tokenUser = verifyPortalToken(token);
+        const denied = () =>
+          new Response("Access expired. Please reload your dashboard.", {
             status: 401,
             headers: { "content-type": "text/plain; charset=utf-8" },
           });
-        }
+        if (!tokenUser) return denied();
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        // Re-check the account on every request so suspended / expired members
+        // lose access immediately, not when the token expires.
+        const { data: prof } = await supabaseAdmin
+          .from("profiles")
+          .select("status")
+          .eq("id", tokenUser)
+          .maybeSingle();
+        if (!prof || prof.status === "suspended") return denied();
+        const { data: activeSub } = await supabaseAdmin
+          .from("subscriptions")
+          .select("expires_at")
+          .eq("user_id", tokenUser)
+          .eq("status", "active")
+          .order("expires_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (
+          !activeSub ||
+          (activeSub.expires_at && new Date(activeSub.expires_at).getTime() < Date.now())
+        )
+          return denied();
+
         const { data: settings } = await supabaseAdmin
           .from("app_content_config")
           .select("content_url, content_headers, content_proxy_url")
