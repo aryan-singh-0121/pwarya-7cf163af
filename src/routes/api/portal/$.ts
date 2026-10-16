@@ -74,12 +74,12 @@ export const Route = createFileRoute("/api/portal/$")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         // Re-check the account on every request so suspended / expired members
         // lose access immediately, not when the token expires.
-        const { data: prof } = await supabaseAdmin
+        const { data: memberProfile } = await supabaseAdmin
           .from("profiles")
           .select("status")
           .eq("id", tokenUser)
           .maybeSingle();
-        if (!prof || prof.status === "suspended") return denied();
+        if (!memberProfile || memberProfile.status === "suspended") return denied();
         const { data: activeSub } = await supabaseAdmin
           .from("subscriptions")
           .select("expires_at")

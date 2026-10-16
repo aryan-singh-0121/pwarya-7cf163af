@@ -8,6 +8,13 @@
       "when": 1792135147399,
       "tag": "0000_profiles_column_update_lock",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792149309788,
+      "tag": "0001_tighten_public_read_rules",
+      "breakpoints": true
     }
   ]
 }
