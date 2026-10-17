@@ -32,6 +32,7 @@ import {
 import { getDeviceId } from "@/hooks/useDeviceId";
 import { ensureSession } from "@/lib/remember";
 import { forgetDevice } from "@/lib/remember.functions";
+import { BATCH_URL, getBatchNavigation } from "@/lib/device-navigation";
 
 export const Route = createFileRoute("/dashboard")({
   ssr: false,
@@ -226,17 +227,7 @@ const STUDY_STEPS = [
   },
 ];
 
-const BATCH_URL = "https://pwthor.live/study/batches";
-
-/**
- * Opens pwthor.live as a real top-level page on the user's own device.
- * "is blocked / refused to connect / ERR_BLOCKED_BY_RESPONSE" only happens when
- * the site is loaded *inside* another page (a frame or an app wrapper), so we
- * always escape that container:
- *  - Android app wrappers / in-app browsers (WebView) → hand off to Chrome.
- *  - Inside a frame → open a separate browser tab/window.
- *  - Normal browser or installed home-screen app → plain link tap.
- */
+/** A native user click opens a top-level page, without a proxy or background request. */
 function openOnDevice(e: React.MouseEvent<HTMLAnchorElement>) {
   const ua = navigator.userAgent || "";
   const inFrame = (() => {
@@ -246,19 +237,9 @@ function openOnDevice(e: React.MouseEvent<HTMLAnchorElement>) {
       return true;
     }
   })();
-  const isAndroidWebView =
-    /Android/i.test(ua) && /; wv\)|FBAN|FBAV|Instagram|Line\/|Telegram|WhatsApp|GSA\//i.test(ua);
-
-  // App wrappers on Android: hand the link to Chrome so it opens as a real page.
-  if (isAndroidWebView && !inFrame) {
-    e.preventDefault();
-    const fallback = encodeURIComponent(BATCH_URL);
-    window.location.href = `intent://pwthor.live/study/batches#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${fallback};end`;
-    return;
-  }
-  // Inside any frame: a native new-tab link tap (never blocked as a popup,
-  // never rendered inside our page). Otherwise: normal same-tab navigation.
-  e.currentTarget.target = inFrame ? "_blank" : "_self";
+  const destination = getBatchNavigation(ua, inFrame);
+  e.currentTarget.href = destination.href;
+  e.currentTarget.target = destination.target;
 }
 
 function BatchLauncher() {
@@ -287,6 +268,8 @@ function BatchLauncher() {
           href={BATCH_URL}
           target="_blank"
           rel="noopener noreferrer"
+          referrerPolicy="no-referrer"
+          onClick={openOnDevice}
           className="mt-3 block w-full text-sm font-medium text-primary underline-offset-4 hover:underline sm:w-auto"
         >
           Not opening? Tap here.

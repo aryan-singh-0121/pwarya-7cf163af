@@ -12,3 +12,5 @@
 ## Rules
 - Member "remember me" uses an httpOnly device cookie holding the refresh token (src/lib/remember.functions.ts), refreshed on every token rotation — why: app wrappers/WebViews can wipe localStorage, and httpOnly keeps the token out of page scripts.
 - "Open batches" must always load pwthor.live as a top-level page (Chrome hand-off from Android WebViews/frames, new tab from frames) — why: that site refuses to be shown inside another page.
+- Keep device destination selection in a browser-safe pure helper with regression tests — why: both study links must use the same frame/WebView handling.
+- Run security handler regressions with Vitest and mocked external services — why: invalid proofs and entitlement checks must be testable without changing real member data.
