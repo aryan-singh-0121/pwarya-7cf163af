@@ -21,6 +21,13 @@ export const getAssetUrl = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Only the admin-published QR image may be signed; any other path is refused.
+    const { data: settings } = await supabaseAdmin
+      .from("app_settings")
+      .select("qr_path")
+      .eq("id", 1)
+      .maybeSingle();
+    if (!settings?.qr_path || settings.qr_path !== data.path) return { url: null };
     const { data: signed } = await supabaseAdmin.storage
       .from("site-assets")
       .createSignedUrl(data.path, 60 * 30);
@@ -120,6 +127,33 @@ export const submitPaymentRequest = createServerFn({ method: "POST" })
       .maybeSingle();
 
     let userId = existing?.id ?? null;
+
+    // Renewals must prove they own the account: the supplied password has to match.
+    if (userId) {
+      const url = process.env["SUPABASE_URL"];
+      const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+      let owns = false;
+      if (url && key) {
+        try {
+          const res = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+            method: "POST",
+            headers: { apikey: key, "content-type": "application/json" },
+            body: JSON.stringify({ email: data.email, password: data.password }),
+          });
+          if (res.ok) {
+            const body = (await res.json()) as { user?: { id?: string } };
+            owns = body.user?.id === userId;
+          }
+        } catch {
+          owns = false;
+        }
+      }
+      if (!owns)
+        return {
+          ok: false as const,
+          error: "This email is already registered. Enter your existing account password.",
+        };
+    }
 
     if (!userId) {
       const { data: phoneTaken } = await supabaseAdmin
