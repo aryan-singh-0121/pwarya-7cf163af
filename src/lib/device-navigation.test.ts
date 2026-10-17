@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { BATCH_URL, getBatchNavigation } from "./device-navigation";
 
 describe("direct device navigation", () => {

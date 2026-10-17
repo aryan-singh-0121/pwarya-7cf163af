@@ -70,6 +70,7 @@ export const submitPaymentRequest = createServerFn({ method: "POST" })
       .from("plans")
       .select("code")
       .eq("code", data.planCode)
+      .eq("is_active", true)
       .maybeSingle();
     if (!plan) return { ok: false as const, error: "Please choose a valid plan." };
 
@@ -82,12 +83,18 @@ export const submitPaymentRequest = createServerFn({ method: "POST" })
     ) {
       return { ok: false as const, error: "Please upload your payment screenshot again." };
     }
-    const { data: proofUsed } = await supabaseAdmin
+    const { data: proofUsed, error: proofLookupError } = await supabaseAdmin
       .from("payment_requests")
       .select("id")
       .eq("screenshot_path", data.screenshotPath)
       .maybeSingle();
-    if (proofUsed)
+    if (proofLookupError || proofUsed)
+      return { ok: false as const, error: "Please upload your payment screenshot again." };
+
+    const { data: proofObject, error: proofObjectError } = await supabaseAdmin.storage
+      .from("payment-proofs")
+      .info(data.screenshotPath);
+    if (proofObjectError || !proofObject)
       return { ok: false as const, error: "Please upload your payment screenshot again." };
 
     // Buyers no longer type a UTR: we issue a unique 12-digit reference number
